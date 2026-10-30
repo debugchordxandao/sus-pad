@@ -153,7 +153,7 @@ function calibratePad(filePath) {
     }
   }
 
-  const maxEndSec = Math.min(wav.duration - 2.0, filePath.includes("warm_pad") ? 34.0 : 38.5);
+  const maxEndSec = Math.min(wav.duration - 1.5, 38.5);
   const minEndSec = Math.max(wav.duration * 0.5, 12.0);
 
   let best = null;

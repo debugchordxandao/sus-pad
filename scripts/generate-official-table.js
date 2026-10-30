@@ -42,3 +42,4 @@ for (const preset of Object.keys(loops).sort()) {
 console.log('=======================================================================================');
 console.log(`Resultado Consolidado: ${passed}/${total} pads APROVADOS (${Math.round((passed / total) * 100)}% de conformidade com os critérios).`);
 console.log(`Configurações gravadas com sucesso em: ${LOOPS_JSON}\n`);
+

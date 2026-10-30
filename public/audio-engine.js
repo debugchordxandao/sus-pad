@@ -374,30 +374,34 @@ class PadStudioAudioEngine {
       const loopUnitF = (endF - startF) - fadeF;
 
       if (loopUnitF > fadeF && startF > 0) {
-        // 1. Buffer de Ataque (0 até loopStart toca uma única vez)
-        const attackBuf = this.ctx.createBuffer(ch, startF, sr);
+        // 1. Buffer de Ataque: toca perfeitamente contínuo de 0 até startF + fadeF
+        const attackFrames = startF + fadeF;
+        const attackBuf = this.ctx.createBuffer(ch, attackFrames, sr);
         for (let c = 0; c < ch; c++) {
-          attackBuf.copyToChannel(buffer.getChannelData(c).subarray(0, startF), c);
+          attackBuf.copyToChannel(buffer.getChannelData(c).subarray(0, attackFrames), c);
         }
 
-        // 2. Buffer de Loop Contínuo com Crossfade de Igual Potência pré-renderizado
+        // 2. Buffer de Loop: corpo contínuo seguido de crossfade suave no final
+        // Inicia em orig[startF + fadeF] para continuidade amostra a amostra com o fim do ataque
         const loopBuf = this.ctx.createBuffer(ch, loopUnitF, sr);
+        const continuousF = loopUnitF - fadeF;
+
         for (let c = 0; c < ch; c++) {
           const orig = buffer.getChannelData(c);
           const chanData = loopBuf.getChannelData(c);
 
-          // Crossfade de igual potência nos primeiros fadeF frames
+          // Parte 1: Trecho contínuo [startF + fadeF ... endF - fadeF]
+          chanData.set(orig.subarray(startF + fadeF, endF - fadeF), 0);
+
+          // Parte 2: Crossfade nos últimos fadeF frames
           for (let f = 0; f < fadeF; f++) {
             const t = f / fadeF;
             const gOut = Math.cos(t * (Math.PI / 2.0));
             const gIn = Math.sin(t * (Math.PI / 2.0));
             const tailSample = orig[endF - fadeF + f];
             const headSample = orig[startF + f];
-            chanData[f] = tailSample * gOut + headSample * gIn;
+            chanData[continuousF + f] = tailSample * gOut + headSample * gIn;
           }
-
-          // Trecho contínuo do meio
-          chanData.set(orig.subarray(startF + fadeF, endF - fadeF), fadeF);
         }
 
         attackSource = this.ctx.createBufferSource();
