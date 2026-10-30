@@ -164,7 +164,7 @@ function notifyRoomMembers(code) {
   });
 }
 
-// Role Permissions Validation
+// Role Permissions Validation - LIBERADO PARA TODOS OS CONTROLES REMOTOS
 function isActionAllowed(role, msg, permissions) {
   const actionType = msg.type;
 
@@ -173,34 +173,19 @@ function isActionAllowed(role, msg, permissions) {
     return role === 'host';
   }
 
+  // Host tem acesso irrestrito
   if (role === 'host') return true;
 
-  if (role === 'keyboardist') {
-    if (!permissions.keyboardist) return false;
-    if (actionType === 'volume' && msg.target && msg.target !== 'pad') return false;
-    return ['pad_on', 'pad_off', 'pad_preset', 'volume', 'ping'].includes(actionType);
-  }
-
-  if (role === 'drummer') {
-    if (!permissions.drummer) return false;
-    if (actionType === 'volume' && msg.target && msg.target !== 'drums') return false;
-    return ['drum', 'drum_hit', 'drum_kit', 'volume', 'ping'].includes(actionType);
-  }
-
-  if (role === 'leader') {
-    if (!permissions.leader) return false;
-    const allowed = [
-      'pad_on', 'pad_off', 'pad_preset',
-      'drum', 'drum_hit', 'drum_kit',
-      'metro', 'bpm', 'timesig', 'metro_pan',
-      'volume', 'panic',
-      'song_activate', 'setlist_update', 'setlist_add', 'setlist_edit', 'setlist_delete',
-      'permission_toggle', 'ping'
-    ];
-    return allowed.includes(actionType);
-  }
-
-  return false;
+  // Todos os controles remotos conectados têm acesso total aos recursos da banda
+  const allowed = [
+    'pad_on', 'pad_off', 'pad_preset',
+    'drum', 'drum_hit', 'drum_kit',
+    'metro', 'bpm', 'timesig', 'metro_pan',
+    'volume', 'panic',
+    'song_activate', 'setlist_update', 'setlist_add', 'setlist_edit', 'setlist_delete',
+    'permission_toggle', 'ping'
+  ];
+  return allowed.includes(actionType);
 }
 
 function formatRoleName(role) {

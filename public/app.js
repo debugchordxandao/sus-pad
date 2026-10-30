@@ -690,53 +690,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (latencyInd) latencyInd.classList.add('hidden');
     }
 
-    if (role === 'keyboardist') {
-      // Tecladista só vê Pads
-      if (navPads) navPads.classList.remove('hidden');
-      if (navDrums) navDrums.classList.add('hidden');
-      if (navMetro) navMetro.classList.add('hidden');
-      if (navSetlist) navSetlist.classList.add('hidden');
-      if (navMixer) navMixer.classList.add('hidden');
-      if (btnPanic) btnPanic.classList.add('hidden');
-      if (quickMetroPill) quickMetroPill.classList.add('hidden');
-      switchTab('tab-pads');
-    } else if (role === 'drummer') {
-      // Baterista só vê Drums
-      if (navPads) navPads.classList.add('hidden');
-      if (navDrums) navDrums.classList.remove('hidden');
-      if (navMetro) navMetro.classList.add('hidden');
-      if (navSetlist) navSetlist.classList.add('hidden');
-      if (navMixer) navMixer.classList.add('hidden');
-      if (btnPanic) btnPanic.classList.add('hidden');
-      if (quickMetroPill) quickMetroPill.classList.add('hidden');
+    // LIBERAR TUDO: todas as abas e controles sempre visíveis para todos os papéis
+    if (navPads) navPads.classList.remove('hidden');
+    if (navDrums) navDrums.classList.remove('hidden');
+    if (navMetro) navMetro.classList.remove('hidden');
+    if (navSetlist) navSetlist.classList.remove('hidden');
+    if (navMixer) navMixer.classList.remove('hidden');
+    if (btnPanic) btnPanic.classList.remove('hidden');
+    if (quickMetroPill) quickMetroPill.classList.remove('hidden');
+
+    // Aba inicial sugerida de acordo com o papel escolhido
+    if (role === 'drummer') {
       switchTab('tab-drums');
-    } else if (role === 'leader') {
-      // Líder vê tudo + Pânico + Mixer
-      if (navPads) navPads.classList.remove('hidden');
-      if (navDrums) navDrums.classList.remove('hidden');
-      if (navMetro) navMetro.classList.remove('hidden');
-      if (navSetlist) navSetlist.classList.remove('hidden');
-      if (navMixer) navMixer.classList.remove('hidden');
-      if (btnPanic) btnPanic.classList.remove('hidden');
-      if (quickMetroPill) quickMetroPill.classList.remove('hidden');
-    } else if (role === 'host') {
-      // Host vê tudo + Pânico + Mixer
-      if (navPads) navPads.classList.remove('hidden');
-      if (navDrums) navDrums.classList.remove('hidden');
-      if (navMetro) navMetro.classList.remove('hidden');
-      if (navSetlist) navSetlist.classList.remove('hidden');
-      if (navMixer) navMixer.classList.remove('hidden');
-      if (btnPanic) btnPanic.classList.remove('hidden');
-      if (quickMetroPill) quickMetroPill.classList.remove('hidden');
     } else {
-      // Solo
-      if (navPads) navPads.classList.remove('hidden');
-      if (navDrums) navDrums.classList.remove('hidden');
-      if (navMetro) navMetro.classList.remove('hidden');
-      if (navSetlist) navSetlist.classList.remove('hidden');
-      if (navMixer) navMixer.classList.remove('hidden');
-      if (btnPanic) btnPanic.classList.remove('hidden');
-      if (quickMetroPill) quickMetroPill.classList.remove('hidden');
+      switchTab('tab-pads');
     }
   }
 
@@ -808,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMetroUI(false);
         broadcastHostState();
         showToast('PÂNICO: Todos os sons interrompidos!', 'error');
-      } else if (myRole === 'leader') {
+      } else {
         sendWs({ type: 'panic' });
         showToast('PÂNICO enviado ao Host!', 'error');
       }
@@ -1189,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (myRole === 'host' || myRole === 'solo') {
       if (audioEngine) audioEngine.setMetronomePan(val);
       if (myRole === 'host') broadcastHostState();
-    } else if (myRole === 'leader') {
+    } else {
       sendWs({ type: 'metro_pan', value: val });
     }
   });
@@ -1228,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (myRole === 'host' || myRole === 'solo') {
       if (audioEngine) audioEngine.setVolume(target, num);
       if (myRole === 'host') broadcastHostState();
-    } else if (['leader', 'keyboardist', 'drummer'].includes(myRole)) {
+    } else {
       sendWs({ type: 'volume', target, value: num });
     }
   }
@@ -1297,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setlist.updateSong(song.id, updates);
           renderSetlist();
           if (myRole === 'host') broadcastHostState();
-        } else if (myRole === 'leader') {
+        } else {
           sendWs({ type: 'setlist_edit', songId: song.id, updates });
         }
       });
@@ -1312,7 +1279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setlist.deleteSong(song.id);
             renderSetlist();
             if (myRole === 'host') broadcastHostState();
-          } else if (myRole === 'leader') {
+          } else {
             sendWs({ type: 'setlist_delete', songId: song.id });
           }
         }
@@ -1342,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setlist.addSong(title, 0, bpm, timeSig, preset);
         renderSetlist();
         if (myRole === 'host') broadcastHostState();
-      } else if (myRole === 'leader') {
+      } else {
         sendWs({ type: 'setlist_add', song: newSong });
       }
     }
