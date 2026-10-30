@@ -1,0 +1,27 @@
+{
+  "name": "padlab-web",
+  "version": "1.0.0",
+  "description": "PadStudio Live - Sistema Colaborativo de Áudio para Banda ao Vivo",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "keywords": [
+    "pad",
+    "worship",
+    "audio",
+    "drums",
+    "live",
+    "collaborative"
+  ],
+  "author": "Alexandre",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  }
+}

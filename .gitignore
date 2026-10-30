@@ -1,0 +1,10 @@
+node_modules/
+.vercel/
+_audio_backup_wav/
+_antigo/
+.env*
+data/*.json
+*.log
+.DS_Store
+cert.pem
+key.pem

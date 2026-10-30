@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Live Audio</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Status Banner & Toast Notifications -->
+  <div id="status-banner" class="status-banner hidden"></div>
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="app">
+    <!-- ========================================================
+         TELA 1: ENTRADA / CRIAR SALA (IGUAL A JOGOS)
+         ======================================================== -->
+    <section id="screen-room-gateway" class="screen active">
+      <div class="gateway-container">
+        <!-- Auth Bar Top -->
+        <div class="gateway-top-bar">
+          <button id="btn-auth-open" class="auth-pill" title="Conta da Banda">
+            <span class="auth-icon">👤</span>
+            <span id="auth-pill-text">Entrar / Banda</span>
+          </button>
+        </div>
+
+        <div class="gateway-card">
+          <!-- OPÇÃO 1: CRIAR SALA -->
+          <div class="gateway-section">
+            <button id="btn-gateway-create" class="btn-apple-primary-giant full-width">
+              CRIAR SALA (HOST)
+            </button>
+            <span class="gateway-hint">Cria uma sala de áudio na mesa. Este aparelho será a saída de som.</span>
+            
+            <div class="pin-config-box">
+              <input type="password" id="input-host-room-pin" maxlength="6" placeholder="PIN da Sala (opcional)" class="styled-pin-input">
+              <input type="password" id="input-host-leader-pin" maxlength="6" placeholder="PIN do Líder (opcional)" class="styled-pin-input">
+            </div>
+          </div>
+
+          <div class="divider-line"><span>OU</span></div>
+
+          <!-- OPÇÃO 2: ENTRAR EM UMA SALA -->
+          <div class="gateway-section">
+            <label class="gateway-label">CÓDIGO DA SALA</label>
+            <input type="text" id="input-gateway-code" maxlength="4" placeholder="Ex: K7QF" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input">
+            
+            <div class="gateway-role-row">
+              <select id="select-gateway-role" class="styled-gateway-select">
+                <option value="keyboardist">Tecladista (Pads)</option>
+                <option value="drummer">Baterista (Drums & FX)</option>
+                <option value="leader">Líder (Geral & Setlist)</option>
+              </select>
+              <button id="btn-gateway-join" class="btn-apple-secondary gateway-join-btn">ENTRAR</button>
+            </div>
+
+            <input type="password" id="input-join-pin" maxlength="6" placeholder="PIN de Acesso (se exigido)" class="styled-pin-input hidden" style="margin-top: 10px;">
+            <div id="gateway-error" class="gateway-error-text hidden"></div>
+          </div>
+
+          <!-- OPÇÃO 3: SOLO OFFLINE -->
+          <div class="gateway-footer">
+            <button id="btn-gateway-solo" class="solo-link-btn">Tocar Solo (Sem Sala)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TELA 2: A TELA ÚNICA (APÓS ENTRAR NA SALA)
+         ======================================================== -->
+    <section id="screen-main-stage" class="screen">
+      <!-- Top Minimalist Apple Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <!-- Apple Segmented Navigation Switcher -->
+          <nav class="apple-segmented-nav" id="main-nav-segments">
+            <button class="nav-segment active" data-tab="tab-pads" id="nav-seg-pads">Pads</button>
+            <button class="nav-segment" data-tab="tab-drums" id="nav-seg-drums">Drums</button>
+            <button class="nav-segment" data-tab="tab-metro" id="nav-seg-metro">Metrônomo</button>
+            <button class="nav-segment" data-tab="tab-setlist" id="nav-seg-setlist">Repertório</button>
+            <button class="nav-segment" data-tab="tab-mixer" id="nav-seg-mixer">Mixer</button>
+          </nav>
+        </div>
+
+        <div class="header-right">
+          <!-- Latency Pill -->
+          <div id="latency-indicator" class="pill-btn latency-pill hidden" title="Latência de Rede">
+            <span class="latency-dot"></span>
+            <span id="latency-val">-- ms</span>
+          </div>
+
+          <!-- PÂNICO (Host & Líder) -->
+          <button id="btn-panic" class="pill-btn btn-panic-header hidden" title="PÂNICO: Parar todos os sons imediatamente">PÂNICO</button>
+
+          <!-- Notation Switcher -->
+          <div class="toggle-group" id="group-notation">
+            <button class="pill-btn active" id="btn-notation-cifra">C</button>
+            <button class="pill-btn" id="btn-notation-solfejo">Dó</button>
+          </div>
+          <div class="toggle-group" id="group-accidentals">
+            <button class="pill-btn active" id="btn-accidental-sharp">♯</button>
+            <button class="pill-btn" id="btn-accidental-flat">♭</button>
+          </div>
+          <!-- Room Status Pill (Shows Room Code & Opens QR/Info) -->
+          <button id="btn-room-info" class="pill-btn room-info-pill" title="Informações da Sala">
+            <span class="dot-green"></span>
+            <span id="header-room-display">SALA: ----</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Host Foreground Notice -->
+      <div id="host-foreground-banner" class="host-notice hidden">
+        ⚠️ <strong>Mesa de Som (HOST):</strong> Mantenha esta aba em primeiro plano no navegador (os temporizadores de áudio e metrônomo podem ser reduzidos se a aba ficar em segundo plano).
+      </div>
+
+      <!-- STAGE CONTENT -->
+      <main class="main-stage">
+        <!-- 1. PADS (MAIN FOCUS) -->
+        <section id="tab-pads" class="tab-pane active">
+          <div class="pane-sub-header">
+            <label>Timbre do Pad:</label>
+            <select id="pad-preset-select" class="apple-preset-select">
+              <option value="shimmer_2" selected>Shimmer Modern</option>
+              <option value="warm_pad">Warm Pad (Aveludado)</option>
+              <option value="worship">Worship Original</option>
+              <option value="pad_shimmer">Shimmer Celestial</option>
+              <option value="abba_pad">Abba Pad (Profundo)</option>
+              <option value="dark_pad">Dark Drone (Denso)</option>
+              <option value="pad_reverse">Reverse Ambient</option>
+              <option value="pad_synth">Synth Pad</option>
+            </select>
+          </div>
+
+          <div class="tones-grid" id="tones-grid">
+            <!-- 12 Clean Large Pad Buttons -->
+          </div>
+        </section>
+
+        <!-- 2. DRUMS & FX -->
+        <section id="tab-drums" class="tab-pane">
+          <div class="pane-sub-header">
+            <label>Kit de Bateria:</label>
+            <select id="drum-kit-select" class="apple-preset-select">
+              <option value="kit_3" selected>01. Rock Worship (Crash & Chimbais)</option>
+              <option value="kit_1">02. Worship Claps & Sub-Kick</option>
+              <option value="acoustic">03. Acústico Natural</option>
+              <option value="kit_2">04. Cinematic FX & Booms</option>
+              <option value="kit_4">05. Hybrid Ambient FX</option>
+            </select>
+          </div>
+
+          <div class="drums-grid" id="drums-grid">
+            <!-- 8 Drum pads generated dynamically -->
+          </div>
+        </section>
+
+        <!-- 3. METRONOME -->
+        <section id="tab-metro" class="tab-pane">
+          <div class="metro-card">
+            <div class="metro-big-display">
+              <span id="metro-full-bpm">120</span>
+              <span class="bpm-tag">BPM</span>
+            </div>
+
+            <div class="beat-indicators" id="beat-dots">
+              <div class="beat-dot" data-beat="1">1</div>
+              <div class="beat-dot" data-beat="2">2</div>
+              <div class="beat-dot" data-beat="3">3</div>
+              <div class="beat-dot" data-beat="4">4</div>
+            </div>
+
+            <div class="metro-actions-row">
+              <button id="btn-metro-full-play" class="btn-apple-primary">INICIAR CLICK</button>
+              <button id="btn-metro-full-tap" class="btn-apple-secondary">TAP TEMPO</button>
+            </div>
+
+            <div class="metro-adjustments">
+              <div class="adjust-box">
+                <label>Fórmula de Compasso</label>
+                <select id="metro-time-sig" class="apple-select">
+                  <option value="4/4" selected>4/4 (Quaternário)</option>
+                  <option value="3/4">3/4 (Ternário)</option>
+                  <option value="6/8">6/8 (Worship)</option>
+                  <option value="2/4">2/4 (Binário)</option>
+                </select>
+              </div>
+
+              <div class="adjust-box">
+                <label>Separação Fone Banda (Pan)</label>
+                <input type="range" id="metro-pan" min="-1" max="1" step="0.2" value="0">
+                <div class="pan-tags">
+                  <span>← Só Fone (L)</span>
+                  <span id="pan-current-label">Centro</span>
+                  <span>Só (R) →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. REPERTÓRIO -->
+        <section id="tab-setlist" class="tab-pane">
+          <div class="setlist-card">
+            <div class="setlist-top-row">
+              <h3>Ordem do Culto / Show</h3>
+              <button id="btn-add-song" class="btn-pill-small">+ Adicionar Música</button>
+            </div>
+            <div class="songs-list" id="songs-list"></div>
+          </div>
+        </section>
+
+        <!-- 5. MIXER (HOST & LÍDER) -->
+        <section id="tab-mixer" class="tab-pane">
+          <div class="mixer-card">
+            <h3 class="mixer-title">Mixer da Mesa (Sincronizado)</h3>
+            <div class="mixer-grid">
+              <div class="mixer-strip">
+                <span class="strip-name">PADS</span>
+                <div class="strip-slider-wrap">
+                  <input type="range" id="fader-pad" min="0" max="100" value="90">
+                </div>
+                <span class="strip-val" id="val-pad">90%</span>
+              </div>
+
+              <div class="mixer-strip">
+                <span class="strip-name">BATERIA</span>
+                <div class="strip-slider-wrap">
+                  <input type="range" id="fader-drums" min="0" max="100" value="85">
+                </div>
+                <span class="strip-val" id="val-drums">85%</span>
+              </div>
+
+              <div class="mixer-strip">
+                <span class="strip-name">CLICK</span>
+                <div class="strip-slider-wrap">
+                  <input type="range" id="fader-metro" min="0" max="100" value="80">
+                </div>
+                <span class="strip-val" id="val-metro">80%</span>
+              </div>
+
+              <div class="mixer-strip strip-master">
+                <span class="strip-name">MASTER</span>
+                <div class="strip-slider-wrap">
+                  <input type="range" id="fader-master" min="0" max="100" value="90">
+                </div>
+                <span class="strip-val" id="val-master">90%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- FLOATING APPLE DOCK -->
+      <footer class="floating-bar">
+        <div class="active-pad-pill">
+          <div class="status-indicator" id="pad-pulse"></div>
+          <div class="status-text">
+            <span class="status-tone" id="active-tone-name">NENHUM</span>
+            <span class="status-hint">Tom Ativo</span>
+          </div>
+          <button id="btn-pad-stop" class="quick-stop-btn" title="Parar Som">■ PARAR</button>
+        </div>
+
+        <div class="quick-metro-pill">
+          <button id="btn-metro-play" class="metro-play-btn" title="Iniciar/Pausar Metrônomo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <div class="bpm-box">
+            <span id="tempo-number">120</span>
+            <small>BPM</small>
+          </div>
+          <div class="bpm-buttons">
+            <button id="bpm-minus-1">-</button>
+            <button id="bpm-plus-1">+</button>
+          </div>
+          <button id="btn-metro-tap" class="tap-pill-btn">TAP</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <!-- MODAL: INFO DA SALA & QR CODE (ABERTO PELO BOTÃO DA SALA) -->
+  <div id="modal-room-info" class="modal-backdrop hidden">
+    <div class="modal-card text-center">
+      <div class="modal-header">
+        <h3>Sala Ativa</h3>
+        <button class="close-btn" id="btn-close-room-info">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="code-display">CÓDIGO: <strong id="modal-lbl-code">----</strong></div>
+        <div class="room-link-box">
+          <span class="room-link-label">Link para celular:</span>
+          <a id="modal-lbl-url" href="#" target="_blank" class="room-link-url">Carregando endereço...</a>
+        </div>
+        <p class="modal-desc">Outros aparelhos no mesmo Wi-Fi podem entrar digitando este código ou escaneando:</p>
+        <div class="qr-container">
+          <img id="room-qr-img" alt="QR Code da Sala">
+        </div>
+        <div class="members-status" id="room-members-status">1 aparelho(s) na sala</div>
+        <div id="room-members-list" class="room-members-list"></div>
+        <div style="margin-top: 16px;">
+          <button id="btn-leave-room" class="btn-apple-secondary">Sair da Sala</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN / CADASTRO DA BANDA -->
+  <div id="modal-auth" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="auth-tabs">
+          <button id="tab-auth-login" class="auth-tab-btn active">Entrar</button>
+          <button id="tab-auth-register" class="auth-tab-btn">Criar Conta</button>
+        </div>
+        <button class="close-btn" id="btn-close-auth">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-auth">
+          <div id="field-band-name" class="form-group hidden">
+            <label class="form-label">Nome da Banda / Ministério</label>
+            <input type="text" id="auth-band-name" placeholder="Ex: Banda Rocha Viva" class="apple-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" id="auth-email" placeholder="seu@email.com" required class="apple-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input type="password" id="auth-password" placeholder="Mínimo 6 caracteres" required class="apple-input">
+          </div>
+          <div id="auth-error" class="auth-error-msg hidden"></div>
+          <button type="submit" id="btn-auth-submit" class="btn-apple-primary-giant full-width" style="margin-top: 14px;">
+            Entrar
+          </button>
+        </form>
+        <div id="auth-user-logged" class="auth-logged-box hidden">
+          <p>Conectado como: <strong id="logged-user-name">---</strong></p>
+          <p class="text-muted" id="logged-band-name" style="margin-top: 4px; font-size: 0.85rem;">---</p>
+          <button id="btn-auth-logout" class="btn-apple-secondary" style="margin-top: 16px; width: 100%;">Sair da Conta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="audio-engine.js"></script>
+  <script src="setlist.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
