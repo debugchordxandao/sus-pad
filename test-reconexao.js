@@ -148,3 +148,4 @@ runTest()
     console.error('Erro no teste de reconexão:', err);
     process.exit(1);
   });
+

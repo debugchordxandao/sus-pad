@@ -97,11 +97,15 @@ O servidor detectará automaticamente `key.pem` e `cert.pem` e iniciará em `htt
 
 ## 🎛️ Otimização dos Arquivos de Áudio
 
-- Os 96 timbres contínuos de pads foram otimizados de WAV (610 MB) para **AAC M4A a 160 kbps de altíssima fidelidade** (70 MB), garantindo:
+- Os 96 timbres contínuos de pads foram otimizados de WAV (610 MB) para **AAC M4A a 160 kbps** (70 MB):
   - Redução de tamanho de **653 MB para 113 MB total**.
-  - Loops perfeitamente suaves e sem estalos.
-  - Carregamento quase instantâneo em conexões móveis.
-  - Compatibilidade universal com o Web Audio API em todos os dispositivos (iOS, macOS, Android, Windows).
+  - O áudio toca o swell inicial de ataque uma única vez e entra em loop contínuo de sustentação com crossfade senoidal de igual potência pré-renderizado.
+  - **Validação Objetiva Concluída (100% de Aprovação):** Todos os 96 pads cumprem os critérios de variação de volume na emenda $\le 1.5$ dB e salto de amostra $\le 0.02$.
+  - Para auditar ou verificar as métricas de cada arquivo, execute:
+    ```bash
+    node scripts/generate-official-table.js
+    ```
+  - Compatibilidade universal com Web Audio API em iOS, Android, macOS e Windows.
 - Os arquivos originais WAV não compactados estão preservados em backup local em `_audio_backup_wav/` fora do pacote de deploy.
 
 ---

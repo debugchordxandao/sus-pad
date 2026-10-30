@@ -302,42 +302,12 @@ class PadStudioAudioEngine {
       const ab = await resp.arrayBuffer();
       const decoded = await this.ctx.decodeAudioData(ab);
 
-      // Se for pad contínuo, aplica crossfade interno de 35ms na emenda para eliminar qualquer descontinuidade
-      if (url.includes('/pads/') && decoded.duration > 5.0) {
-        this.applyLoopSeamConditioning(decoded, 0.035);
-      }
-
+      // Cache buffer
       this.audioBufferCache[url] = decoded;
       return decoded;
     } catch (e) {
       console.warn('Erro ao decodificar buffer:', url, e);
       return null;
-    }
-  }
-
-  /**
-   * Aplica crossfade suave nos limites do buffer para garantir loop contínuo e sem estalos.
-   */
-  applyLoopSeamConditioning(buffer, crossfadeSec = 0.035) {
-    const sampleRate = buffer.sampleRate;
-    const fadeFrames = Math.min(Math.floor(sampleRate * crossfadeSec), Math.floor(buffer.length / 4));
-    const totalFrames = buffer.length;
-
-    for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-      const data = buffer.getChannelData(ch);
-      for (let i = 0; i < fadeFrames; i++) {
-        const t = i / fadeFrames; // 0.0 -> 1.0
-        // Curva senoidal de igual potência para emenda perfeita
-        const gainIn = Math.sin((t * Math.PI) / 2);
-        const gainOut = Math.cos((t * Math.PI) / 2);
-
-        const headSample = data[i];
-        const tailSample = data[totalFrames - fadeFrames + i];
-
-        const blended = headSample * gainIn + tailSample * gainOut;
-        data[totalFrames - fadeFrames + i] = blended;
-        data[i] = blended;
-      }
     }
   }
 
@@ -364,39 +334,110 @@ class PadStudioAudioEngine {
     const now = this.ctx.currentTime;
     const fadeDuration = parseFloat(this.crossfadeTime);
 
+    // Carrega metadados de loop se ainda não carregados
+    if (!this.padLoopsConfig) {
+      try {
+        const resp = await fetch('audio/pad-loops.json');
+        this.padLoopsConfig = await resp.json();
+      } catch (e) {
+        this.padLoopsConfig = {};
+      }
+    }
+
+    const presetConfig = this.padLoopsConfig ? this.padLoopsConfig[this.padPreset] : null;
+    const fileName = sampleUrl.split('/').pop().replace(/\.[^/.]+$/, '');
+    const loopInfo = presetConfig ? (presetConfig[fileName] || Object.values(presetConfig)[toneIndex]) : null;
+
     const voiceGain = this.ctx.createGain();
     const lpf = this.ctx.createBiquadFilter();
     lpf.type = 'lowpass';
     lpf.frequency.setValueAtTime(this.padLpfFreq, now);
 
-    const source = this.ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
-
-    // Ajusta o loop para cortar o priming do encoder e manter a emenda condicionada
-    if (buffer.duration > 5.0) {
-      source.loopStart = 0.02;
-      source.loopEnd = buffer.duration - 0.02;
-    }
-
-    source.connect(voiceGain);
     voiceGain.connect(lpf);
     lpf.connect(this.padMasterGain);
 
-    // Instant attack
+    let attackSource = null;
+    let loopSource = null;
+
+    if (loopInfo && buffer.duration > 8.0) {
+      // Compensação de priming para M4A vs WAV
+      const isM4A = sampleUrl.endsWith('.m4a');
+      const loopStart = isM4A ? (loopInfo.m4aLoopStart || loopInfo.loopStart + 0.0156) : loopInfo.loopStart;
+      const loopEnd = isM4A ? (loopInfo.m4aLoopEnd || loopInfo.loopEnd + 0.0156) : loopInfo.loopEnd;
+      const fadeSec = loopInfo.crossfade || 3.0;
+
+      const sr = buffer.sampleRate;
+      const ch = buffer.numberOfChannels;
+      const startF = Math.max(1, Math.round(loopStart * sr));
+      const endF = Math.round(Math.min(loopEnd, buffer.duration - 0.1) * sr);
+      const fadeF = Math.round(fadeSec * sr);
+      const loopUnitF = (endF - startF) - fadeF;
+
+      if (loopUnitF > fadeF && startF > 0) {
+        // 1. Buffer de Ataque (0 até loopStart toca uma única vez)
+        const attackBuf = this.ctx.createBuffer(ch, startF, sr);
+        for (let c = 0; c < ch; c++) {
+          attackBuf.copyToChannel(buffer.getChannelData(c).subarray(0, startF), c);
+        }
+
+        // 2. Buffer de Loop Contínuo com Crossfade de Igual Potência pré-renderizado
+        const loopBuf = this.ctx.createBuffer(ch, loopUnitF, sr);
+        for (let c = 0; c < ch; c++) {
+          const orig = buffer.getChannelData(c);
+          const chanData = loopBuf.getChannelData(c);
+
+          // Crossfade de igual potência nos primeiros fadeF frames
+          for (let f = 0; f < fadeF; f++) {
+            const t = f / fadeF;
+            const gOut = Math.cos(t * (Math.PI / 2.0));
+            const gIn = Math.sin(t * (Math.PI / 2.0));
+            const tailSample = orig[endF - fadeF + f];
+            const headSample = orig[startF + f];
+            chanData[f] = tailSample * gOut + headSample * gIn;
+          }
+
+          // Trecho contínuo do meio
+          chanData.set(orig.subarray(startF + fadeF, endF - fadeF), fadeF);
+        }
+
+        attackSource = this.ctx.createBufferSource();
+        attackSource.buffer = attackBuf;
+        attackSource.connect(voiceGain);
+
+        loopSource = this.ctx.createBufferSource();
+        loopSource.buffer = loopBuf;
+        loopSource.loop = true;
+        loopSource.connect(voiceGain);
+
+        // Agendamento sample-accurate na Web Audio API
+        attackSource.start(now);
+        loopSource.start(now + attackBuf.duration);
+      }
+    }
+
+    // Fallback padrão se não houver dados de loop
+    if (!attackSource && !loopSource) {
+      loopSource = this.ctx.createBufferSource();
+      loopSource.buffer = buffer;
+      loopSource.loop = true;
+      loopSource.connect(voiceGain);
+      loopSource.start(now);
+    }
+
+    // Ataque suave inicial
     voiceGain.gain.setValueAtTime(0.15, now);
     voiceGain.gain.linearRampToValueAtTime(1.0, now + 0.12);
 
-    source.start(now);
-
     const newVoice = {
-      source,
+      attackSource,
+      loopSource,
       gainNode: voiceGain,
       stop: () => {
         try {
-          source.stop();
-          source.disconnect();
+          if (attackSource) { attackSource.stop(); attackSource.disconnect(); }
+          if (loopSource) { loopSource.stop(); loopSource.disconnect(); }
           voiceGain.disconnect();
+          lpf.disconnect();
         } catch (e) {}
       }
     };

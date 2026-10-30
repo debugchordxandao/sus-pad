@@ -193,3 +193,4 @@ runBenchmark()
     console.error('Falha no benchmark:', err);
     process.exit(1);
   });
+
