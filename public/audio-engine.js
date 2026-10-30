@@ -301,11 +301,43 @@ class PadStudioAudioEngine {
       const resp = await fetch(url);
       const ab = await resp.arrayBuffer();
       const decoded = await this.ctx.decodeAudioData(ab);
+
+      // Se for pad contínuo, aplica crossfade interno de 35ms na emenda para eliminar qualquer descontinuidade
+      if (url.includes('/pads/') && decoded.duration > 5.0) {
+        this.applyLoopSeamConditioning(decoded, 0.035);
+      }
+
       this.audioBufferCache[url] = decoded;
       return decoded;
     } catch (e) {
       console.warn('Erro ao decodificar buffer:', url, e);
       return null;
+    }
+  }
+
+  /**
+   * Aplica crossfade suave nos limites do buffer para garantir loop contínuo e sem estalos.
+   */
+  applyLoopSeamConditioning(buffer, crossfadeSec = 0.035) {
+    const sampleRate = buffer.sampleRate;
+    const fadeFrames = Math.min(Math.floor(sampleRate * crossfadeSec), Math.floor(buffer.length / 4));
+    const totalFrames = buffer.length;
+
+    for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let i = 0; i < fadeFrames; i++) {
+        const t = i / fadeFrames; // 0.0 -> 1.0
+        // Curva senoidal de igual potência para emenda perfeita
+        const gainIn = Math.sin((t * Math.PI) / 2);
+        const gainOut = Math.cos((t * Math.PI) / 2);
+
+        const headSample = data[i];
+        const tailSample = data[totalFrames - fadeFrames + i];
+
+        const blended = headSample * gainIn + tailSample * gainOut;
+        data[totalFrames - fadeFrames + i] = blended;
+        data[i] = blended;
+      }
     }
   }
 
@@ -340,6 +372,12 @@ class PadStudioAudioEngine {
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
+
+    // Ajusta o loop para cortar o priming do encoder e manter a emenda condicionada
+    if (buffer.duration > 5.0) {
+      source.loopStart = 0.02;
+      source.loopEnd = buffer.duration - 0.02;
+    }
 
     source.connect(voiceGain);
     voiceGain.connect(lpf);

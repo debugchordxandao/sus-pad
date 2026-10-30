@@ -1,10 +1,26 @@
+# Dependências e Builds
 node_modules/
 .vercel/
-_audio_backup_wav/
 _antigo/
+
+# Áudio Backup WAV (610 MB - preservado localmente)
+_audio_backup_wav/
+
+# Variáveis de Ambiente e Segredos
 .env*
-data/*.json
+*.env
+*.pem
+key.pem
+cert.pem
+
+# Dados persistentes e SQLite
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.json.tmp*
+
+# Logs e Sistema
 *.log
 .DS_Store
-cert.pem
-key.pem
+Thumbs.db

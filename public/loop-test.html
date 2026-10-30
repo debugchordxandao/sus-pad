@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PadStudio - Teste de Emenda de Loop (A/B)</title>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --card: #151518;
+      --border: #27272a;
+      --accent: #0a84ff;
+      --accent-green: #30d158;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 640px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; text-align: center; }
+    p.sub { font-size: 0.85rem; color: var(--muted); text-align: center; margin-bottom: 24px; }
+    
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    select, button {
+      width: 100%;
+      padding: 12px 14px;
+      background: #202024;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .switch-ab {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .btn-ab {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      background: #222227;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+    }
+    .btn-ab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 16px rgba(10, 132, 255, 0.4);
+    }
+
+    .playback-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .btn-play {
+      background: var(--accent-green);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-stop {
+      background: #3a3a3c;
+      color: var(--text);
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .monitor-box {
+      margin-top: 24px;
+      background: #0f0f12;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #27272a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.1s linear;
+    }
+    .seam-alert {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #ff9f0a;
+      height: 20px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Audição Comparativa de Loop (60s)</h1>
+    <p class="sub">Compare de ouvido o WAV original contra o M4A com emenda condicionada.</p>
+
+    <div class="form-group">
+      <label>1. Escolha o Timbre (Preset):</label>
+      <select id="select-preset">
+        <option value="shimmer_2">Shimmer Modern (shimmer_2)</option>
+        <option value="warm_pad">Warm Pad (Aveludado)</option>
+        <option value="pad_shimmer">Shimmer Celestial (pad_shimmer)</option>
+        <option value="worship">Worship Original</option>
+        <option value="abba_pad">Abba Pad (Profundo)</option>
+        <option value="dark_pad">Dark Drone (Denso)</option>
+        <option value="pad_reverse">Reverse Ambient</option>
+        <option value="pad_synth">Synth Pad</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>2. Escolha a Nota / Tom:</label>
+      <select id="select-tone">
+        <option value="0">C (Dó)</option>
+        <option value="1">C♯ / D♭</option>
+        <option value="2">D (Ré)</option>
+        <option value="3">D♯ / E♭</option>
+        <option value="4">E (Mi)</option>
+        <option value="5">F (Fá)</option>
+        <option value="6">F♯ / G♭</option>
+        <option value="7">G (Sol)</option>
+        <option value="8">G♯ / A♭</option>
+        <option value="9">A (Lá)</option>
+        <option value="10">A♯ / B♭</option>
+        <option value="11">B (Si)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>3. Formato para Ouvir:</label>
+      <div class="switch-ab">
+        <button id="btn-mode-m4a" class="btn-ab active">M4A Otimizado (70 MB)</button>
+        <button id="btn-mode-wav" class="btn-ab">WAV Original (Backup)</button>
+      </div>
+    </div>
+
+    <div class="playback-controls">
+      <button id="btn-play" class="btn-play">▶ Tocar em Loop (60s)</button>
+      <button id="btn-stop" class="btn-stop">■ Parar</button>
+    </div>
+
+    <div class="monitor-box">
+      <div class="status-row">
+        <span>Tempo Decorrido: <b id="lbl-timer">00:00 / 01:00</b></span>
+        <span>Loop Atual: <b id="lbl-loops">#0</b></span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progress-bar" class="progress-bar-fill"></div>
+      </div>
+      <div id="seam-indicator" class="seam-alert"></div>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let currentSource = null;
+    let gainNode = null;
+    let isPlaying = false;
+    let currentMode = 'm4a'; // 'm4a' ou 'wav'
+    let timerInterval = null;
+    let elapsedSeconds = 0;
+    let loopCount = 0;
+
+    const manifestM4a = {
+      "warm_pad": ["analog_c.m4a","analog_cs.m4a","analog_d.m4a","analog_ds.m4a","analog_e.m4a","analog_f.m4a","analog_fs.m4a","analog_g.m4a","analog_gs.m4a","analog_a.m4a","analog_as.m4a","analog_b.m4a"],
+      "worship": ["c.m4a","cs.m4a","d.m4a","ds.m4a","e.m4a","f.m4a","fs.m4a","g.m4a","gs.m4a","a.m4a","as.m4a","b.m4a"],
+      "pad_shimmer": ["shimmer_c.m4a","shimmer_cs.m4a","shimmer_d.m4a","shimmer_ds.m4a","shimmer_e.m4a","shimmer_f.m4a","shimmer_fs.m4a","shimmer_g.m4a","shimmer_gs.m4a","shimmer_a.m4a","shimmer_as.m4a","shimmer_b.m4a"],
+      "shimmer_2": ["shimmer2_c.m4a","shimmer2_cs.m4a","shimmer2_d.m4a","shimmer2_ds.m4a","shimmer2_e.m4a","shimmer2_f.m4a","shimmer2_fs.m4a","shimmer2_g.m4a","shimmer2_gs.m4a","shimmer2_a.m4a","shimmer2_as.m4a","shimmer2_b.m4a"],
+      "abba_pad": ["c_abba.m4a","cs_abba.m4a","d_abba.m4a","ds_abba.m4a","e_abba.m4a","f_abba.m4a","fs_abba.m4a","g_abba.m4a","gs_abba.m4a","a_abba.m4a","as_abba.m4a","b_abba.m4a"],
+      "dark_pad": ["dark_c.m4a","dark_cs.m4a","dark_d.m4a","dark_ds.m4a","dark_e.m4a","dark_f.m4a","dark_fs.m4a","dark_g.m4a","dark_gs.m4a","dark_a.m4a","dark_as.m4a","dark_b.m4a"],
+      "pad_reverse": ["c_reverse.m4a","cs_reverse.m4a","d_reverse.m4a","ds_reverse.m4a","e_reverse.m4a","f_reverse.m4a","fs_reverse.m4a","g_reverse.m4a","gs_reverse.m4a","a_reverse.m4a","as_reverse.m4a","b_reverse.m4a"],
+      "pad_synth": ["c_synth.m4a","cs_synth.m4a","d_synth.m4a","ds_synth.m4a","e_synth.m4a","f_synth.m4a","fs_synth.m4a","g_synth.m4a","gs_synth.m4a","a_synth.m4a","as_synth.m4a","b_synth.m4a"]
+    };
+
+    function getAudioUrl() {
+      const preset = document.getElementById('select-preset').value;
+      const tone = parseInt(document.getElementById('select-tone').value);
+      const m4aFilename = manifestM4a[preset][tone];
+
+      if (currentMode === 'm4a') {
+        return `/audio/pads/${preset}/${m4aFilename}`;
+      } else {
+        const wavFilename = m4aFilename.replace('.m4a', '.wav');
+        return `/test-audio-wav/pads/${preset}/${wavFilename}`;
+      }
+    }
+
+    // Seam conditioning
+    function applySeamConditioning(buffer) {
+      const sampleRate = buffer.sampleRate;
+      const fadeFrames = Math.floor(sampleRate * 0.035);
+      const totalFrames = buffer.length;
+
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let i = 0; i < fadeFrames; i++) {
+          const t = i / fadeFrames;
+          const gainIn = Math.sin((t * Math.PI) / 2);
+          const gainOut = Math.cos((t * Math.PI) / 2);
+          const head = data[i];
+          const tail = data[totalFrames - fadeFrames + i];
+          const blended = head * gainIn + tail * gainOut;
+          data[totalFrames - fadeFrames + i] = blended;
+          data[i] = blended;
+        }
+      }
+    }
+
+    async function playPad() {
+      stopPad();
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+      const url = getAudioUrl();
+      document.getElementById('seam-indicator').textContent = 'Baixando e decodificando áudio...';
+
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Arquivo não encontrado: ' + url);
+        const ab = await resp.arrayBuffer();
+        const buffer = await audioCtx.decodeAudioData(ab);
+
+        // Se estiver no modo M4A, aplica o condicionamento de emenda
+        if (currentMode === 'm4a') {
+          applySeamConditioning(buffer);
+        }
+
+        gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.85, audioCtx.currentTime);
+        gainNode.connect(audioCtx.destination);
+
+        currentSource = audioCtx.createBufferSource();
+        currentSource.buffer = buffer;
+        currentSource.loop = true;
+        if (currentMode === 'm4a' && buffer.duration > 5.0) {
+          currentSource.loopStart = 0.02;
+          currentSource.loopEnd = buffer.duration - 0.02;
+        }
+
+        currentSource.connect(gainNode);
+        currentSource.start();
+        isPlaying = true;
+
+        startTimer(buffer.duration);
+        document.getElementById('seam-indicator').textContent = `Tocando ${currentMode.toUpperCase()} (Duração: ${buffer.duration.toFixed(1)}s)`;
+      } catch (err) {
+        document.getElementById('seam-indicator').textContent = 'Erro: ' + err.message;
+      }
+    }
+
+    function stopPad() {
+      if (currentSource) {
+        try { currentSource.stop(); currentSource.disconnect(); } catch (e) {}
+        currentSource = null;
+      }
+      if (timerInterval) clearInterval(timerInterval);
+      isPlaying = false;
+      elapsedSeconds = 0;
+      loopCount = 0;
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('lbl-timer').textContent = '00:00 / 01:00';
+      document.getElementById('lbl-loops').textContent = '#0';
+      document.getElementById('seam-indicator').textContent = '';
+    }
+
+    function startTimer(bufferDuration) {
+      if (timerInterval) clearInterval(timerInterval);
+      elapsedSeconds = 0;
+      loopCount = 1;
+      document.getElementById('lbl-loops').textContent = `#${loopCount}`;
+
+      timerInterval = setInterval(() => {
+        elapsedSeconds++;
+        const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+        const secs = String(elapsedSeconds % 60).padStart(2, '0');
+        document.getElementById('lbl-timer').textContent = `${mins}:${secs} / 01:00`;
+        document.getElementById('progress-bar').style.width = `${(elapsedSeconds / 60) * 100}%`;
+
+        // Verifica momento da emenda
+        const posInLoop = elapsedSeconds % Math.floor(bufferDuration);
+        if (posInLoop === 0 && elapsedSeconds > 0) {
+          loopCount++;
+          document.getElementById('lbl-loops').textContent = `#${loopCount}`;
+          const seamEl = document.getElementById('seam-indicator');
+          seamEl.textContent = `⚡ EMENDA DE LOOP #${loopCount} OCORREU AGORA!`;
+          setTimeout(() => {
+            if (isPlaying) seamEl.textContent = `Tocando ${currentMode.toUpperCase()}...`;
+          }, 3000);
+        }
+
+        if (elapsedSeconds >= 60) {
+          stopPad();
+          document.getElementById('seam-indicator').textContent = 'Teste de 60s concluído.';
+        }
+      }, 1000);
+    }
+
+    // Eventos
+    document.getElementById('btn-play').addEventListener('click', playPad);
+    document.getElementById('btn-stop').addEventListener('click', stopPad);
+
+    const btnM4a = document.getElementById('btn-mode-m4a');
+    const btnWav = document.getElementById('btn-mode-wav');
+
+    btnM4a.addEventListener('click', () => {
+      currentMode = 'm4a';
+      btnM4a.classList.add('active');
+      btnWav.classList.remove('active');
+      if (isPlaying) playPad();
+    });
+
+    btnWav.addEventListener('click', () => {
+      currentMode = 'wav';
+      btnWav.classList.add('active');
+      btnM4a.classList.remove('active');
+      if (isPlaying) playPad();
+    });
+  </script>
+</body>
+</html>

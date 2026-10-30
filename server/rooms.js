@@ -1,10 +1,11 @@
 /**
  * PadStudio Live - Room Manager Module
  * Manages rooms, role permissions, PIN security, state synchronization,
- * and unified real-time broadcasting (WebSocket + Server-Sent Events for Serverless)
+ * and SQLite persistence across server reboots.
  */
 
 const { WebSocket } = require('ws');
+const { saveRoomDb, loadActiveRoomsDb, deleteRoomDb } = require('./db');
 
 // Room Characters (ambiguity-free alphanumeric)
 const ROOM_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -19,6 +20,33 @@ function generateRoomCode() {
 
 // Global Rooms Map
 const rooms = new Map();
+
+// Recover active rooms from persistent SQLite database on startup
+(function loadSavedRooms() {
+  try {
+    const saved = loadActiveRoomsDb(15 * 60 * 1000);
+    for (const r of saved) {
+      rooms.set(r.code, {
+        code: r.code,
+        hostToken: r.hostToken,
+        hostWs: null,
+        ownerId: r.ownerId,
+        roomPin: r.roomPin,
+        leaderPin: r.leaderPin,
+        clients: new Set(),
+        permissions: r.permissions || { keyboardist: true, drummer: true, leader: true },
+        state: r.state,
+        createdAt: r.createdAt,
+        lastActivity: r.lastActivity
+      });
+    }
+    if (saved.length > 0) {
+      console.log(`[DB] ${saved.length} sala(s) ativa(s) recuperada(s) do banco de dados persistente.`);
+    }
+  } catch (err) {
+    console.warn('[DB] Aviso ao restaurar salas do SQLite:', err.message);
+  }
+})();
 
 function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId = null } = {}) {
   let code = generateRoomCode();
@@ -74,6 +102,7 @@ function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId =
   }
 
   rooms.set(code, room);
+  saveRoomDb(room);
   return room;
 }
 
@@ -84,7 +113,9 @@ function getRoom(code) {
 
 function deleteRoom(code) {
   if (!code) return false;
-  return rooms.delete(code.toUpperCase().trim());
+  const upper = code.toUpperCase().trim();
+  deleteRoomDb(upper);
+  return rooms.delete(upper);
 }
 
 // Real-Time Broadcast to Room (WebSocket with TCP_NODELAY)
@@ -93,7 +124,6 @@ function broadcastToRoom(room, data, excludeWs = null) {
   room.lastActivity = Date.now();
   const payload = JSON.stringify(data);
 
-  // Broadcast to connected WebSocket clients
   for (const client of room.clients) {
     if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
       try {
@@ -101,6 +131,14 @@ function broadcastToRoom(room, data, excludeWs = null) {
       } catch (err) {}
     }
   }
+}
+
+// Update Room State & Persist
+function updateRoomState(room, partialState) {
+  if (!room) return;
+  room.state = { ...room.state, ...partialState };
+  room.lastActivity = Date.now();
+  saveRoomDb(room);
 }
 
 // Notify room roster & latency
@@ -151,7 +189,6 @@ function isActionAllowed(role, msg, permissions) {
 
   if (role === 'leader') {
     if (!permissions.leader) return false;
-    // Leader has full control commands, but CANNOT send host_state_update
     const allowed = [
       'pad_on', 'pad_off', 'pad_preset',
       'drum', 'drum_hit', 'drum_kit',
@@ -176,14 +213,15 @@ function formatRoleName(role) {
   }
 }
 
-// Cleanup stale rooms after 15 minutes of zero clients
+// Auto-cleanup stale rooms after 15 minutes of inactivity without clients
 setInterval(() => {
   const now = Date.now();
   for (const [code, room] of rooms.entries()) {
-    const totalClients = (room.clients ? room.clients.size : 0) + (room.sseClients ? room.sseClients.size : 0);
+    const totalClients = room.clients ? room.clients.size : 0;
     if (totalClients === 0 && (now - room.lastActivity > 15 * 60 * 1000)) {
       rooms.delete(code);
-      console.log(`[Auto-Cleanup] Sala expirada removida: ${code}`);
+      deleteRoomDb(code);
+      console.log(`[Auto-Cleanup] Sala expirada removida do cache e do SQLite: ${code}`);
     }
   }
 }, 60000);
@@ -193,9 +231,9 @@ module.exports = {
   createRoom,
   getRoom,
   deleteRoom,
+  updateRoomState,
   broadcastToRoom,
   notifyRoomMembers,
   isActionAllowed,
   formatRoleName
 };
-

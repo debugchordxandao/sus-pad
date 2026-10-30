@@ -8,30 +8,42 @@ O **PadStudio Live** transforma um computador ou tablet conectado à mesa de som
 
 Diferente de plataformas serverless (como a Vercel, que não mantêm WebSockets abertos nem estado em memória), o PadStudio Live deve ser executado em um **serviço Node.js contínuo com WebSockets bidirecionais (`TCP_NODELAY`) e volume persistente**.
 
-### 1. Deploy no Railway (Recomendado - 2 minutos)
-1. Crie uma conta em [railway.app](https://railway.app/).
-2. Clique em **"New Project"** -> **"Deploy from GitHub repo"** e selecione o repositório do PadStudio Live.
-3. O Railway detectará o arquivo `Procfile` e `package.json` automaticamente.
-4. Em **Variables** do serviço, configure:
-   - `JWT_SECRET`: Insira uma chave aleatória longa e segura (ex: `openssl rand -hex 32`).
-   - `DATA_DIR`: `/app/data` (ou deixe o padrão `./data`).
-   - `PORT`: O Railway define automaticamente.
-5. *(Opcional)* Em **Volumes**, adicione um volume persistente montado em `/app/data` para que as contas e repertórios nunca sejam perdidos entre deploys.
-6. Em **Networking**, clique em **Generate Domain** para obter a URL pública (ex: `https://padstudio-live.up.railway.app`).
+### 1. Deploy no Railway (Recomendado - Passo a Passo Exato)
+1. Crie ou acesse sua conta em [railway.app](https://railway.app/).
+2. No seu painel (Dashboard), clique no botão **"New Project"**.
+3. Selecione a opção **"Deploy from GitHub repo"** e escolha o repositório privado do `PadStudio-Live`.
+4. O Railway detectará o arquivo `Procfile` e o `package.json` de forma 100% automática.
+5. Clique no card do serviço recém-criado e acesse a aba **"Variables"**:
+   - Clique em **"Add Variable"** e defina `NODE_ENV` com o valor `production`.
+   - Clique em **"Add Variable"** e defina `JWT_SECRET` com uma chave segura de 32+ caracteres (ex: execute `openssl rand -hex 32` no seu terminal e cole o resultado).
+   - Clique em **"Add Variable"** e defina `DATA_DIR` com o valor `/app/data`.
+6. Acesse a aba **"Volumes"** do serviço:
+   - Clique em **"Add Volume"** (ou **"Mount Volume"**).
+   - Defina o **Mount Path** exatamente como: `/app/data`.
+   - Salve. Isso garante que o banco de dados (SQLite/JSON) com as contas, salas e repertórios fique gravado permanentemente mesmo quando houver novos deploys.
+7. Acesse a aba **"Settings"** -> role até **"Networking"** -> clique no botão **"Generate Domain"** para receber sua URL pública segura com SSL (`https://padstudio-live.up.railway.app`).
 
-### 2. Deploy no Render
-1. Acesse [render.com](https://render.com/) e clique em **"New +"** -> **"Web Service"**.
-2. Conecte o repositório GitHub.
-3. Configure os campos:
-   - **Environment:** `Node`
+### 2. Deploy no Render (Alternativa)
+1. Acesse [render.com](https://render.com/) e clique no botão azul **"New +"** -> selecione **"Web Service"**.
+2. Conecte sua conta do GitHub e selecione o repositório `PadStudio-Live`.
+3. Preencha os campos da tela de configuração:
+   - **Name:** `padstudio-live`
+   - **Region:** Selecione a região mais próxima (ex: Ohio ou Frankfurt).
+   - **Branch:** `main`
+   - **Runtime:** `Node`
    - **Build Command:** `npm install`
    - **Start Command:** `npm start`
-   - **Health Check Path:** `/health`
+   - **Health Check Path:** `/health` (o Render usará para verificar se o serviço e o disco estão operacionais).
 4. Em **Environment Variables**, adicione:
-   - `JWT_SECRET`: Chave secreta de 64 caracteres.
+   - `NODE_ENV`: `production`
+   - `JWT_SECRET`: sua chave segura gerada via terminal.
    - `DATA_DIR`: `/var/data`
-5. Em **Disks** (plano com disco persistente), monte um disco em `/var/data`.
-6. Conclua o deploy. O Render fornecerá a URL pública com SSL gratuito.
+5. Na seção **Disks** (requer plano com suporte a disco persistente):
+   - Clique em **"Add Disk"**.
+   - Defina o **Name**: `padstudio-data`.
+   - Defina o **Mount Path**: `/var/data`.
+   - Defina o **Size**: 1 GB.
+6. Clique no botão inferior **"Create Web Service"**. O Render fará o build e fornecerá sua URL pública.
 
 ### 3. Conexão Cliente-Servidor (Zero Config)
 - **Mesmo domínio (padrão):** O app usa automaticamente `window.location.host` e se conecta via `wss://` (ou `ws://`) sem precisar de configuração alguma.
