@@ -12,16 +12,16 @@ const os = require('os');
 const { WebSocketServer, WebSocket } = require('ws');
 
 const apiRoutes = require('./routes');
-const { getClientIp, pinLimiter } = require('./rate-limit');
+const { getClientIp, pinLimiter, roomLookupLimiter } = require('./rate-limit');
 const { validateRolePin } = require('./auth');
 const {
-  rooms,
   createRoom,
   getRoom,
   updateRoomState,
   broadcastToRoom,
   notifyRoomMembers,
   isActionAllowed,
+  setRoomPermissions,
   formatRoleName,
   flushAllRooms
 } = require('./rooms');
@@ -76,7 +76,6 @@ app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 // Health check endpoint for Railway, Render, container monitors (verifies disk write access)
 app.get('/health', (req, res) => {
   const dataDir = process.env.DATA_DIR || path.join(__dirname, '../data');
-  let isWritable = false;
   try {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
@@ -84,13 +83,11 @@ app.get('/health', (req, res) => {
     const testFile = path.join(dataDir, `.health_test_${Date.now()}`);
     fs.writeFileSync(testFile, 'ok', 'utf8');
     fs.unlinkSync(testFile);
-    isWritable = true;
   } catch (err) {
     console.error('[HEALTH CHECK ERROR] Falha na escrita em DATA_DIR:', err.message);
     return res.status(500).json({
       status: 'error',
       storage: 'read-only or unavailable',
-      error: err.message,
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString()
     });
@@ -116,10 +113,13 @@ app.use('/audio', express.static(path.join(__dirname, '../audio'), {
   immutable: true
 }));
 
-// Test comparison route for loop-test.html (serves original WAVs from backup outside deploy)
-const backupWavPath = path.join(__dirname, '../_audio_backup_wav');
-if (fs.existsSync(backupWavPath)) {
-  app.use('/test-audio-wav', express.static(backupWavPath));
+// Ferramentas de desenvolvimento (calibração dos loops): nunca expostas em produção
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/dev/loop-test', (req, res) => res.sendFile(path.join(__dirname, '../tools/loop-test.html')));
+  const backupWavPath = path.join(__dirname, '../_audio_backup_wav');
+  if (fs.existsSync(backupWavPath)) {
+    app.use('/test-audio-wav', express.static(backupWavPath));
+  }
 }
 
 // Get local IPv4 addresses on Wi-Fi/LAN
@@ -167,14 +167,27 @@ function sanitizePin(pin) {
   return String(pin).trim().slice(0, 12);
 }
 
-// Strict Message Schema Validation
+// Validação estrutural das mensagens (o host ainda normaliza tudo que executa)
+const isShortString = (v, max = 40) => typeof v === 'string' && v.length <= max;
+const optional = (v, check) => v === undefined || check(v);
+
 function isValidMessageFormat(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
-  if (!msg.type || typeof msg.type !== 'string' || msg.type.length > 50) return false;
-  if (msg.toneIndex !== undefined && (typeof msg.toneIndex !== 'number' || msg.toneIndex < 0 || msg.toneIndex > 11)) return false;
-  if (msg.bpm !== undefined && (typeof msg.bpm !== 'number' || msg.bpm < 30 || msg.bpm > 320)) return false;
-  if (msg.velocity !== undefined && (typeof msg.velocity !== 'number' || msg.velocity < 0 || msg.velocity > 1)) return false;
-  return true;
+  if (!isShortString(msg.type, 50) || !msg.type) return false;
+  const checks = [
+    optional(msg.toneIndex, v => Number.isInteger(v) && v >= 0 && v <= 11),
+    optional(msg.padIndex, v => Number.isInteger(v) && v >= 0 && v <= 15),
+    optional(msg.velocity, v => typeof v === 'number' && v >= 0 && v <= 1),
+    optional(msg.delta, v => v === 1 || v === -1),
+    optional(msg.value, v => (typeof v === 'number' && Number.isFinite(v)) || isShortString(v, 20)),
+    optional(msg.countIn, v => typeof v === 'boolean'),
+    optional(msg.subdivide, v => typeof v === 'boolean'),
+    ...['songId', 'listId', 'kitId', 'preset', 'action', 'target', 'clickSound', 'role', 'roomCode']
+      .map(key => optional(msg[key], v => isShortString(v))),
+    optional(msg.order, v => Array.isArray(v) && v.length <= 300 && v.every(id => isShortString(id))),
+    ...['song', 'updates', 'permissions', 'state'].map(key => optional(msg[key], v => v && typeof v === 'object' && !Array.isArray(v)))
+  ];
+  return checks.every(Boolean);
 }
 
 // WebSocket Connection Handler
@@ -202,7 +215,7 @@ wss.on('connection', (ws, req) => {
     // 1. Size limit
     const limit = ws.role === 'host' ? MAX_HOST_MSG_BYTES : MAX_CLIENT_MSG_BYTES;
     if (raw.length > limit) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Mensagem excede o tamanho limite permitido (4 KB).' }));
+      ws.send(JSON.stringify({ type: 'error', message: `Mensagem acima do limite de ${Math.round(limit / 1024)} KB.` }));
       return;
     }
 
@@ -262,9 +275,13 @@ function handleClientMessage(ws, msg) {
   // 1. Latency Ping/Pong
   if (type === 'ping') {
     ws.send(JSON.stringify({ type: 'pong', clientTime: msg.clientTime }));
-    if (typeof msg.measuredLatency === 'number') {
-      ws.latency = Math.round(msg.measuredLatency);
-      notifyRoomMembers(ws.roomCode);
+    if (typeof msg.measuredLatency === 'number' && Number.isFinite(msg.measuredLatency)) {
+      const latency = Math.max(0, Math.min(10000, Math.round(msg.measuredLatency)));
+      // Só reenvia a lista de membros quando a latência muda de verdade
+      if (Math.abs(latency - ws.latency) >= 3) {
+        ws.latency = latency;
+        notifyRoomMembers(ws.roomCode);
+      }
     }
     return;
   }
@@ -284,6 +301,7 @@ function handleClientMessage(ws, msg) {
       hostToken: room.hostToken,
       hasRoomPin: !!room.roomPin,
       hasLeaderPin: !!room.leaderPin,
+      permissions: room.permissions,
       state: room.state
     }));
 
@@ -293,24 +311,16 @@ function handleClientMessage(ws, msg) {
 
   // 2b. Reconnect HOST
   if (type === 'reconnect_host') {
+    const lookup = roomLookupLimiter.check(ws.clientIp);
+    if (!lookup.allowed) return safeSend(ws, { type: 'error', message: lookup.message });
+
     const code = String(msg.roomCode || '').toUpperCase().trim();
     const token = msg.hostToken;
     const room = getRoom(code);
-
-    if (!room) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: `Sala "${code}" não encontrada ou expirada.`
-      }));
-      return;
-    }
-
-    if (typeof token !== 'string' || room.hostToken !== token) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Token de anfitrião inválido para esta sala.'
-      }));
-      return;
+    // Mesma resposta para sala inexistente e token errado: não revela quais salas existem
+    if (!room || typeof token !== 'string' || room.hostToken !== token) {
+      roomLookupLimiter.fail(ws.clientIp);
+      return safeSend(ws, { type: 'error', message: `Sala "${code}" não encontrada ou expirada.` });
     }
 
     // Host re-authenticated
@@ -342,15 +352,15 @@ function handleClientMessage(ws, msg) {
 
   // 3. Room Joining (REMOTE CONTROLLERS)
   if (type === 'join_room') {
+    const lookup = roomLookupLimiter.check(ws.clientIp);
+    if (!lookup.allowed) return safeSend(ws, { type: 'error', message: lookup.message });
+
     const code = String(msg.roomCode || '').toUpperCase().trim();
     const room = getRoom(code);
 
     if (!room) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: `Sala "${code}" não encontrada. Verifique o código no HOST.`
-      }));
-      return;
+      roomLookupLimiter.fail(ws.clientIp);
+      return safeSend(ws, { type: 'error', message: `Sala "${code}" não encontrada. Confira o código na tela do host.` });
     }
 
     // Security: Only allow remote controller roles in join_room (never 'host')
@@ -385,6 +395,7 @@ function handleClientMessage(ws, msg) {
       return;
     }
     pinLimiter.reset(ws.clientIp);
+    roomLookupLimiter.reset(ws.clientIp);
 
     // Assign role
     ws.roomCode = code;
@@ -419,6 +430,13 @@ function handleClientMessage(ws, msg) {
       action: type,
       message: 'Seu papel atual não tem permissão para este comando.'
     }));
+    return;
+  }
+
+  // 5a. Permissões por função (só o host)
+  if (type === 'set_permissions') {
+    const permissions = setRoomPermissions(room, msg.permissions);
+    broadcastToRoom(room, { type: 'permissions', permissions });
     return;
   }
 

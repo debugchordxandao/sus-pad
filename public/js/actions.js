@@ -1,0 +1,183 @@
+/**
+ * Ações do app. Toda interação passa por dispatch():
+ * - no host e no modo solo, a ação roda direto no motor de áudio;
+ * - num controle remoto, vai para o host pela sala (e a tela já reflete a mudança).
+ * O host executa os comandos recebidos pelo mesmo caminho (runCommand).
+ */
+
+import { store, emit, isLocal, allowed } from './store.js';
+import { send } from './net.js';
+import { COMMAND_CAPABILITY } from './permissions.js';
+import { TIME_SIGNATURES } from './catalog.js';
+import { toast } from './ui.js';
+
+const lib = () => store.library;
+const engine = () => store.engine;
+
+/** Estado visível da sala, montado a partir do motor e da biblioteca (host/solo). */
+export function buildView() {
+  const e = engine();
+  const l = lib();
+  return {
+    activeToneIndex: e.activeToneIndex,
+    padPreset: e.targetPreset,
+    padLoading: e.padLoading,
+    drumKit: e.drumKit,
+    bpm: e.bpm,
+    timeSig: e.timeSig,
+    metroPlaying: e.metroPlaying,
+    metroPan: e.metroPan,
+    countIn: e.countIn,
+    subdivide: e.subdivide,
+    clickSound: e.clickSound,
+    volumes: { ...e.volumes },
+    activeSongId: l.activeSongId,
+    songs: l.songs,
+    lists: l.lists.map(x => ({ id: x.id, name: x.name })),
+    activeListId: l.list.id
+  };
+}
+
+function activateSong(song) {
+  if (!song) return;
+  const e = engine();
+  // Toca na hora (no timbre atual) e faz crossfade para o timbre da música quando ele carregar
+  e.playTone(song.keyIndex);
+  e.setPadPreset(song.preset, song.keyIndex);
+  e.setMetronomeBpm(song.bpm);
+  e.setMetronomeTimeSig(song.timeSig);
+  lib().activeSongId = song.id;
+  emit('song-activated', song);
+  const next = lib().nextSong();
+  if (next && next.preset !== song.preset) e.prefetchPreset(next.preset);
+}
+
+const validTone = (i) => Number.isInteger(i) && i >= 0 && i <= 11;
+
+/** Executores (rodam só no host/solo). Retornar false = não mudou o estado da sala. */
+const executors = {
+  pad_on: ({ toneIndex }) => { if (validTone(toneIndex)) engine().playTone(toneIndex); },
+  pad_off: () => engine().stopPad(0.4),
+  pad_preset: ({ preset }) => { engine().setPadPreset(preset); },
+  drum_hit: ({ padIndex, velocity }) => {
+    engine().playDrumPad(padIndex, typeof velocity === 'number' ? velocity : 1);
+    emit('drum-hit', padIndex);
+    return false;
+  },
+  drum_kit: ({ kitId }) => engine().setDrumKit(kitId),
+  metro: ({ action }) => (action === 'start' ? engine().startMetronome() : engine().stopMetronome()),
+  bpm: ({ value }) => engine().setMetronomeBpm(value),
+  timesig: ({ value }) => { if (TIME_SIGNATURES.includes(value)) engine().setMetronomeTimeSig(value); },
+  metro_pan: ({ value }) => engine().setMetronomePan(value),
+  metro_opts: ({ countIn, subdivide, clickSound }) => engine().setMetronomeOptions({ countIn, subdivide, clickSound }),
+  volume: ({ target, value }) => engine().setVolume(target, value),
+  panic: ({ fromName }) => {
+    engine().panicStop();
+    toast(fromName ? `Pânico acionado por ${fromName}` : 'Todos os sons parados', 'error');
+  },
+  song_activate: ({ songId }) => activateSong(lib().getSong(songId)),
+  song_next: () => {
+    const next = lib().nextSong();
+    if (next) activateSong(next);
+    else toast('Fim do repertório');
+  },
+  transpose: ({ delta }) => {
+    if (delta !== 1 && delta !== -1) return false;
+    const song = lib().getSong(lib().activeSongId);
+    if (!song) return false;
+    const key = (song.keyIndex + delta + 12) % 12;
+    lib().updateSong(song.id, { keyIndex: key });
+    if (engine().activeToneIndex !== null) engine().playTone(key);
+  },
+  setlist_add: ({ song }) => { lib().addSong(song); },
+  setlist_edit: ({ songId, updates }) => { lib().updateSong(songId, updates); },
+  setlist_delete: ({ songId }) => lib().deleteSong(songId),
+  setlist_reorder: ({ order }) => lib().reorder(order),
+  setlist_select: ({ listId }) => { lib().selectList(listId); }
+};
+
+export const COMMANDS = Object.keys(executors);
+
+/** Atualização otimista no controle remoto, para a tela responder antes do eco do host. */
+const optimistic = {
+  pad_preset: ({ preset }) => ({ padPreset: preset }),
+  drum_kit: ({ kitId }) => ({ drumKit: kitId }),
+  bpm: ({ value }) => ({ bpm: value }),
+  timesig: ({ value }) => ({ timeSig: value }),
+  metro_pan: ({ value }) => ({ metroPan: value }),
+  metro_opts: (p) => Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)),
+  volume: ({ target, value }) => ({ volumes: { ...store.view.volumes, [target]: value } })
+};
+
+export function dispatch(type, payload = {}) {
+  if (isLocal()) {
+    runCommand(type, payload);
+    return;
+  }
+  const capability = COMMAND_CAPABILITY[type];
+  if (capability && !allowed(capability)) {
+    toast('Sua função não tem permissão para isso nesta sala.', 'error');
+    return;
+  }
+  if (!send({ type, ...payload })) {
+    toast('Sem conexão com a sala.', 'error');
+    return;
+  }
+  if (optimistic[type]) {
+    store.view = { ...store.view, ...optimistic[type](payload) };
+    emit('view', store.view);
+  }
+}
+
+/** Executa um comando no motor local (host/solo) e propaga o novo estado. */
+export function runCommand(type, payload = {}) {
+  const fn = executors[type];
+  if (!fn || !engine()) return;
+  const changed = fn(payload);
+  if (changed !== false) commit();
+}
+
+// ---------------------------------------------------------------------------
+// Estado: host/solo → telas e sala
+// ---------------------------------------------------------------------------
+
+const BROADCAST_INTERVAL_MS = 50;
+let lastBroadcast = 0;
+let broadcastTimer = null;
+
+export function commit() {
+  if (!isLocal() || !engine()) return;
+  store.view = buildView();
+  emit('view', store.view);
+  if (store.role === 'host') scheduleBroadcast();
+}
+
+/** Envia o estado à sala no máximo a cada 50 ms (arrastar um fader não inunda a rede). */
+function scheduleBroadcast() {
+  const wait = BROADCAST_INTERVAL_MS - (Date.now() - lastBroadcast);
+  if (wait <= 0) {
+    broadcastNow();
+  } else if (!broadcastTimer) {
+    broadcastTimer = setTimeout(broadcastNow, wait);
+  }
+}
+
+export function broadcastNow() {
+  clearTimeout(broadcastTimer);
+  broadcastTimer = null;
+  lastBroadcast = Date.now();
+  send({ type: 'host_state_update', state: store.view });
+}
+
+/** Controle remoto: aplica o estado enviado pelo host. */
+export function applyRemoteState(state) {
+  if (!state || typeof state !== 'object') return;
+  const next = { ...store.view };
+  for (const key of Object.keys(next)) {
+    if (state[key] !== undefined) next[key] = state[key];
+  }
+  if (!Array.isArray(next.songs)) next.songs = [];
+  if (!Array.isArray(next.lists)) next.lists = [];
+  store.view = next;
+  emit('view', store.view);
+}

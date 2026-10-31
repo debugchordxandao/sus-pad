@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="Pads, bateria, metrônomo e repertório sincronizados para banda ao vivo.">
+  <meta name="description" content="Pads, bateria, click e repertório sincronizados para banda ao vivo.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,6 +14,8 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <link rel="modulepreload" href="js/main.js">
+  <script type="module" src="js/main.js"></script>
 </head>
 <body>
   <div id="status-banner" class="status-banner hidden" role="status"></div>
@@ -31,16 +33,21 @@
 
         <h1 class="large-title">PadStudio</h1>
 
+        <div id="group-host-resume" class="group hidden">
+          <button id="btn-host-resume" class="btn btn-primary btn-lg full-width">Voltar para a sala</button>
+          <div class="group-footer">A sala continua aberta para a banda enquanto você volta.</div>
+        </div>
+
         <div class="group">
           <div class="group-header">Criar sala</div>
           <div class="group-body">
             <label class="row">
               <span class="row-label">PIN da sala</span>
-              <input type="password" id="input-host-room-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input styled-pin-input">
+              <input type="password" id="input-host-room-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input">
             </label>
             <label class="row">
               <span class="row-label">PIN do líder</span>
-              <input type="password" id="input-host-leader-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input styled-pin-input">
+              <input type="password" id="input-host-leader-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input">
             </label>
           </div>
           <div class="group-footer">Este aparelho vira a saída de som na mesa.</div>
@@ -53,18 +60,18 @@
           <div class="group-body">
             <label class="row">
               <span class="row-label">Função</span>
-              <select id="select-gateway-role" class="row-input row-select styled-gateway-select">
-                <option value="leader">Controle total</option>
+              <select id="select-gateway-role" class="row-input row-select">
+                <option value="leader">Líder</option>
                 <option value="keyboardist">Tecladista</option>
                 <option value="drummer">Baterista</option>
               </select>
             </label>
             <label class="row hidden-row">
-              <input type="password" id="input-join-pin" maxlength="6" inputmode="numeric" placeholder="PIN de acesso" class="row-input row-input--full styled-pin-input hidden">
+              <input type="password" id="input-join-pin" maxlength="6" inputmode="numeric" placeholder="PIN do líder" class="row-input row-input--full hidden">
             </label>
           </div>
           <div id="gateway-error" class="gateway-error-text hidden" role="alert"></div>
-          <button id="btn-gateway-join" class="btn btn-secondary btn-lg full-width gateway-join-btn">Entrar</button>
+          <button id="btn-gateway-join" class="btn btn-secondary btn-lg full-width">Entrar</button>
         </div>
 
         <div class="gateway-footer">
@@ -77,11 +84,11 @@
     <section id="screen-main-stage" class="screen">
       <header class="app-header">
         <div class="header-left">
-          <button id="btn-room-info" class="text-btn room-info-pill" title="Sala e QR Code">
+          <button id="btn-room-info" class="text-btn room-info-pill" title="Sala, QR Code e permissões">
             <span class="dot-green"></span>
             <span id="header-room-display"></span>
           </button>
-          <div id="latency-indicator" class="latency-pill hidden" title="Latência">
+          <div id="latency-indicator" class="latency-pill hidden" title="Latência até o servidor">
             <span class="latency-dot"></span>
             <span id="latency-val"></span>
           </div>
@@ -96,7 +103,8 @@
         </nav>
 
         <div class="header-right">
-          <button id="btn-panic" class="btn-panic-header hidden" title="Parar todos os sons imediatamente">Pânico</button>
+          <button id="btn-settings" class="text-btn">Ajustes</button>
+          <button id="btn-panic" class="btn-panic-header" title="Parar todos os sons imediatamente">Pânico</button>
         </div>
       </header>
 
@@ -104,28 +112,37 @@
         Mantenha esta aba aberta em primeiro plano durante o culto.
       </div>
 
+      <div id="song-strip" class="song-strip hidden">
+        <div class="song-strip-text">
+          <strong id="song-strip-title"></strong>
+          <span id="song-strip-meta"></span>
+          <span id="song-strip-notes" class="song-strip-notes"></span>
+        </div>
+        <div class="song-strip-actions">
+          <div class="segmented segmented--sm" role="group" aria-label="Mudar o tom">
+            <button id="btn-transpose-down" title="Descer meio tom">−½</button>
+            <button id="btn-transpose-up" title="Subir meio tom">+½</button>
+          </div>
+          <button id="btn-song-next" class="btn btn-primary btn-sm">Próxima</button>
+        </div>
+      </div>
+
       <main class="main-stage">
         <!-- PADS -->
         <section id="tab-pads" class="tab-pane active">
           <div class="pane-bar">
-            <select id="pad-preset-select" class="plain-select apple-preset-select" aria-label="Timbre">
-              <option value="shimmer_2" selected>Shimmer Modern</option>
-              <option value="warm_pad">Warm Pad</option>
-              <option value="worship">Worship</option>
-              <option value="pad_shimmer">Shimmer Celestial</option>
-              <option value="abba_pad">Abba Pad</option>
-              <option value="dark_pad">Dark Drone</option>
-              <option value="pad_reverse">Reverse Ambient</option>
-              <option value="pad_synth">Synth Pad</option>
-            </select>
+            <div class="pane-bar-left">
+              <select id="pad-preset-select" class="plain-select" aria-label="Timbre"></select>
+              <span id="pad-loading" class="loading-label hidden">Carregando…</span>
+            </div>
             <div class="pane-bar-right">
-              <div class="segmented segmented--sm" id="group-notation">
-                <button class="pill-btn active" id="btn-notation-cifra">C</button>
-                <button class="pill-btn" id="btn-notation-solfejo">Dó</button>
+              <div class="segmented segmented--sm" role="group" aria-label="Notação">
+                <button id="btn-notation-cifra">C</button>
+                <button id="btn-notation-solfejo">Dó</button>
               </div>
-              <div class="segmented segmented--sm" id="group-accidentals">
-                <button class="pill-btn active" id="btn-accidental-sharp">♯</button>
-                <button class="pill-btn" id="btn-accidental-flat">♭</button>
+              <div class="segmented segmented--sm" role="group" aria-label="Acidentes">
+                <button id="btn-accidental-sharp">♯</button>
+                <button id="btn-accidental-flat">♭</button>
               </div>
             </div>
           </div>
@@ -135,13 +152,7 @@
         <!-- BATERIA -->
         <section id="tab-drums" class="tab-pane">
           <div class="pane-bar">
-            <select id="drum-kit-select" class="plain-select apple-preset-select" aria-label="Kit">
-              <option value="kit_3" selected>Rock Worship</option>
-              <option value="kit_1">Worship Claps &amp; Sub-Kick</option>
-              <option value="acoustic">Acústico</option>
-              <option value="kit_2">Cinematic FX</option>
-              <option value="kit_4">Hybrid Ambient</option>
-            </select>
+            <select id="drum-kit-select" class="plain-select" aria-label="Kit"></select>
           </div>
           <div class="drums-grid" id="drums-grid"></div>
         </section>
@@ -150,34 +161,40 @@
         <section id="tab-metro" class="tab-pane">
           <div class="metro-card">
             <div class="metro-display">
-              <div class="metro-big-display">
-                <span id="metro-full-bpm">120</span>
-                <span class="bpm-tag">BPM</span>
+              <div class="metro-bpm-row">
+                <button id="metro-bpm-minus" class="round-btn" aria-label="Diminuir BPM">−</button>
+                <div class="metro-big-display">
+                  <span id="metro-full-bpm">120</span>
+                  <span class="bpm-tag">BPM</span>
+                </div>
+                <button id="metro-bpm-plus" class="round-btn" aria-label="Aumentar BPM">+</button>
               </div>
-              <div class="beat-indicators" id="beat-dots">
-                <div class="beat-dot" data-beat="1">1</div>
-                <div class="beat-dot" data-beat="2">2</div>
-                <div class="beat-dot" data-beat="3">3</div>
-                <div class="beat-dot" data-beat="4">4</div>
-              </div>
+              <div class="beat-indicators" id="beat-dots"></div>
               <div class="metro-actions-row">
                 <button id="btn-metro-full-play" class="btn btn-primary btn-lg">Iniciar</button>
                 <button id="btn-metro-full-tap" class="btn btn-secondary btn-lg">Tap</button>
               </div>
             </div>
 
-            <div class="group metro-adjustments">
+            <div class="group">
               <div class="group-body">
-                <label class="row adjust-box">
+                <label class="row">
                   <span class="row-label">Compasso</span>
-                  <select id="metro-time-sig" class="row-input row-select apple-select">
-                    <option value="4/4" selected>4/4</option>
-                    <option value="3/4">3/4</option>
-                    <option value="6/8">6/8</option>
-                    <option value="2/4">2/4</option>
-                  </select>
+                  <select id="metro-time-sig" class="row-input row-select"></select>
                 </label>
-                <div class="row row--stack adjust-box">
+                <label class="row">
+                  <span class="row-label">Som</span>
+                  <select id="metro-click-sound" class="row-input row-select"></select>
+                </label>
+                <label class="row">
+                  <span class="row-label">Colcheias</span>
+                  <input type="checkbox" id="metro-subdivide" class="switch">
+                </label>
+                <label class="row">
+                  <span class="row-label">Só contagem</span>
+                  <input type="checkbox" id="metro-count-in" class="switch">
+                </label>
+                <div class="row row--stack">
                   <div class="row-line">
                     <span class="row-label">Pan do click</span>
                     <span id="pan-current-label" class="row-value">Centro</span>
@@ -185,6 +202,7 @@
                   <input type="range" id="metro-pan" min="-1" max="1" step="0.2" value="0" aria-label="Pan do click">
                 </div>
               </div>
+              <div class="group-footer">Só contagem toca um compasso e para. Pan à esquerda manda o click só para o fone da banda.</div>
             </div>
           </div>
         </section>
@@ -193,8 +211,11 @@
         <section id="tab-setlist" class="tab-pane">
           <div class="setlist-card">
             <div class="pane-bar">
-              <h2 class="pane-title">Músicas</h2>
-              <button id="btn-add-song" class="text-btn text-btn--strong">Adicionar</button>
+              <select id="setlist-select" class="plain-select" aria-label="Repertório"></select>
+              <div class="pane-bar-right">
+                <button id="btn-setlist-edit" class="text-btn">Editar</button>
+                <button id="btn-add-song" class="text-btn text-btn--strong">Adicionar</button>
+              </div>
             </div>
             <div class="songs-list" id="songs-list"></div>
           </div>
@@ -206,22 +227,22 @@
             <div class="group-body mixer-grid">
               <div class="mixer-strip">
                 <span class="strip-name">Pads</span>
-                <div class="strip-slider-wrap"><input type="range" id="fader-pad" min="0" max="100" value="90" aria-label="Pads"></div>
+                <div class="strip-slider-wrap"><input type="range" id="fader-pad" min="0" max="100" value="90" aria-label="Volume dos pads"></div>
                 <span class="strip-val" id="val-pad">90%</span>
               </div>
               <div class="mixer-strip">
                 <span class="strip-name">Bateria</span>
-                <div class="strip-slider-wrap"><input type="range" id="fader-drums" min="0" max="100" value="85" aria-label="Bateria"></div>
+                <div class="strip-slider-wrap"><input type="range" id="fader-drums" min="0" max="100" value="85" aria-label="Volume da bateria"></div>
                 <span class="strip-val" id="val-drums">85%</span>
               </div>
               <div class="mixer-strip">
                 <span class="strip-name">Click</span>
-                <div class="strip-slider-wrap"><input type="range" id="fader-metro" min="0" max="100" value="80" aria-label="Click"></div>
+                <div class="strip-slider-wrap"><input type="range" id="fader-metro" min="0" max="100" value="80" aria-label="Volume do click"></div>
                 <span class="strip-val" id="val-metro">80%</span>
               </div>
               <div class="mixer-strip strip-master">
                 <span class="strip-name">Master</span>
-                <div class="strip-slider-wrap"><input type="range" id="fader-master" min="0" max="100" value="90" aria-label="Master"></div>
+                <div class="strip-slider-wrap"><input type="range" id="fader-master" min="0" max="100" value="90" aria-label="Volume master"></div>
                 <span class="strip-val" id="val-master">90%</span>
               </div>
             </div>
@@ -236,11 +257,8 @@
           <span class="status-tone" id="active-tone-name"></span>
           <button id="btn-pad-stop" class="quick-stop-btn" title="Parar pad">Parar</button>
         </div>
-
         <div class="quick-metro-pill">
-          <button id="btn-metro-play" class="metro-play-btn" title="Iniciar/pausar click">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </button>
+          <button id="btn-metro-play" class="metro-play-btn" aria-label="Iniciar click"></button>
           <div class="bpm-box">
             <span id="tempo-number">120</span>
             <small>BPM</small>
@@ -261,16 +279,24 @@
       <div class="modal-header">
         <span></span>
         <h3 id="room-info-title">Sala</h3>
-        <button class="text-btn text-btn--strong close-btn" id="btn-close-room-info">OK</button>
+        <button class="text-btn text-btn--strong" id="btn-close-room-info">OK</button>
       </div>
       <div class="modal-body">
-        <strong class="code-display" id="modal-lbl-code"></strong>
-        <div class="qr-container"><img id="room-qr-img" alt="QR Code da sala"></div>
-        <a id="modal-lbl-url" href="#" target="_blank" rel="noopener" class="room-link-url"></a>
-        <div class="group">
-          <div class="group-header" id="room-members-status"></div>
-          <div id="room-members-list" class="group-body room-members-list"></div>
+        <div id="room-online" class="modal-body">
+          <strong class="code-display" id="modal-lbl-code"></strong>
+          <div class="qr-container"><img id="room-qr-img" alt="QR Code da sala"></div>
+          <a id="modal-lbl-url" href="#" target="_blank" rel="noopener" class="room-link-url"></a>
+          <div class="group">
+            <div class="group-header" id="room-members-status"></div>
+            <div id="room-members-list" class="group-body room-members-list"></div>
+          </div>
+          <div id="group-permissions" class="group hidden">
+            <div class="group-header">Permissões</div>
+            <div id="permissions-grid" class="group-body permissions-grid"></div>
+            <div class="group-footer">Desligue o que cada função não deve controlar. Muda na hora para todos.</div>
+          </div>
         </div>
+        <p id="room-solo" class="text-muted hidden">Tocando sem sala, só neste aparelho.</p>
         <button id="btn-leave-room" class="btn btn-destructive full-width">Sair da sala</button>
       </div>
     </div>
@@ -280,7 +306,7 @@
   <div id="modal-song" class="modal-backdrop hidden">
     <form id="form-song" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="song-sheet-title" autocomplete="off">
       <div class="modal-header">
-        <button type="button" class="text-btn close-btn" id="btn-close-song">Cancelar</button>
+        <button type="button" class="text-btn" id="btn-close-song">Cancelar</button>
         <h3 id="song-sheet-title">Nova música</h3>
         <button type="submit" class="text-btn text-btn--strong">Salvar</button>
       </div>
@@ -300,29 +326,22 @@
             </label>
             <label class="row">
               <span class="row-label">BPM</span>
-              <input type="number" id="song-bpm" min="30" max="320" inputmode="numeric" class="row-input">
+              <input type="number" id="song-bpm" min="30" max="300" inputmode="numeric" class="row-input">
             </label>
             <label class="row">
               <span class="row-label">Compasso</span>
-              <select id="song-timesig" class="row-input row-select">
-                <option value="4/4">4/4</option>
-                <option value="3/4">3/4</option>
-                <option value="6/8">6/8</option>
-                <option value="2/4">2/4</option>
-              </select>
+              <select id="song-timesig" class="row-input row-select"></select>
             </label>
             <label class="row">
               <span class="row-label">Timbre</span>
-              <select id="song-preset" class="row-input row-select">
-                <option value="shimmer_2">Shimmer Modern</option>
-                <option value="warm_pad">Warm Pad</option>
-                <option value="worship">Worship</option>
-                <option value="pad_shimmer">Shimmer Celestial</option>
-                <option value="abba_pad">Abba Pad</option>
-                <option value="dark_pad">Dark Drone</option>
-                <option value="pad_reverse">Reverse Ambient</option>
-                <option value="pad_synth">Synth Pad</option>
-              </select>
+              <select id="song-preset" class="row-input row-select"></select>
+            </label>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-body">
+            <label class="row row--stack">
+              <textarea id="song-notes" maxlength="140" rows="2" placeholder="Anotações (aparecem para toda a banda)" class="row-textarea"></textarea>
             </label>
           </div>
         </div>
@@ -331,31 +350,96 @@
     </form>
   </div>
 
+  <!-- SHEET: REPERTÓRIO -->
+  <div id="modal-list" class="modal-backdrop hidden">
+    <form id="form-list" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="list-sheet-title" autocomplete="off">
+      <div class="modal-header">
+        <button type="button" class="text-btn" id="btn-close-list">Cancelar</button>
+        <h3 id="list-sheet-title">Novo repertório</h3>
+        <button type="submit" class="text-btn text-btn--strong">Salvar</button>
+      </div>
+      <div class="modal-body">
+        <div class="group">
+          <div class="group-body">
+            <label class="row">
+              <input type="text" id="list-name" maxlength="40" placeholder="Ex.: Culto de domingo" class="row-input row-input--full" required>
+            </label>
+          </div>
+        </div>
+        <button type="button" id="btn-list-delete" class="btn btn-destructive full-width hidden">Excluir repertório</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- SHEET: AJUSTES -->
+  <div id="modal-settings" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-header">
+        <span></span>
+        <h3 id="settings-title">Ajustes</h3>
+        <button class="text-btn text-btn--strong" id="btn-close-settings">OK</button>
+      </div>
+      <div class="modal-body">
+        <div class="group">
+          <div class="group-header">MIDI</div>
+          <div class="group-body">
+            <label class="row">
+              <span class="row-label">Teclado ou pedal</span>
+              <input type="checkbox" id="settings-midi" class="switch">
+            </label>
+            <div class="row hidden-row">
+              <span id="midi-status" class="row-value"></span>
+            </div>
+          </div>
+          <div class="group-footer">Qualquer nota toca o pad do mesmo tom. Pedal de sustain: próxima música.</div>
+        </div>
+        <div class="group">
+          <div class="group-header">Sem internet</div>
+          <div class="group-body">
+            <div class="row">
+              <span class="row-label">Sons no aparelho</span>
+              <span id="offline-status" class="row-value"></span>
+            </div>
+          </div>
+          <button id="btn-download-all" class="btn btn-secondary full-width">Baixar todos os sons</button>
+          <div class="group-footer">Cerca de 85 MB. Depois disso o app toca mesmo com a internet instável.</div>
+        </div>
+        <div class="group">
+          <div class="group-header">Teclado do computador</div>
+          <div class="group-body">
+            <div class="row"><span class="row-label">Bateria</span><span class="row-value">Q W E R · A S D F</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- SHEET: CONTA -->
   <div id="modal-auth" class="modal-backdrop hidden">
     <div class="modal-card" role="dialog" aria-modal="true" aria-label="Conta da banda">
       <div class="modal-header">
         <span></span>
         <div class="segmented segmented--sm auth-tabs">
-          <button id="tab-auth-login" class="auth-tab-btn active">Entrar</button>
-          <button id="tab-auth-register" class="auth-tab-btn">Criar conta</button>
+          <button id="tab-auth-login" class="active">Entrar</button>
+          <button id="tab-auth-register">Criar conta</button>
         </div>
-        <button class="text-btn text-btn--strong close-btn" id="btn-close-auth">OK</button>
+        <button class="text-btn text-btn--strong" id="btn-close-auth">OK</button>
       </div>
       <div class="modal-body">
         <form id="form-auth">
           <div class="group">
             <div class="group-body">
-              <label id="field-band-name" class="row form-group hidden">
-                <input type="text" id="auth-band-name" placeholder="Nome da banda" class="row-input row-input--full apple-input">
+              <label id="field-band-name" class="row hidden">
+                <input type="text" id="auth-band-name" maxlength="60" placeholder="Nome da banda" class="row-input row-input--full">
               </label>
-              <label class="row form-group">
-                <input type="email" id="auth-email" placeholder="E-mail" required autocomplete="email" class="row-input row-input--full apple-input">
+              <label class="row">
+                <input type="email" id="auth-email" placeholder="E-mail" required autocomplete="email" class="row-input row-input--full">
               </label>
-              <label class="row form-group">
-                <input type="password" id="auth-password" placeholder="Senha" required autocomplete="current-password" class="row-input row-input--full apple-input">
+              <label class="row">
+                <input type="password" id="auth-password" placeholder="Senha (mínimo 6 caracteres)" required minlength="6" autocomplete="current-password" class="row-input row-input--full">
               </label>
             </div>
+            <div class="group-footer">Com a conta, seus repertórios ficam salvos e aparecem em qualquer aparelho.</div>
           </div>
           <div id="auth-error" class="auth-error-msg hidden" role="alert"></div>
           <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-lg full-width">Entrar</button>
@@ -363,14 +447,11 @@
         <div id="auth-user-logged" class="auth-logged-box hidden">
           <p><strong id="logged-user-name"></strong></p>
           <p class="text-muted" id="logged-band-name"></p>
+          <p class="text-muted sync-status" id="sync-status"></p>
           <button id="btn-auth-logout" class="btn btn-destructive full-width">Sair da conta</button>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="audio-engine.js"></script>
-  <script src="setlist.js"></script>
-  <script src="app.js"></script>
 </body>
 </html>

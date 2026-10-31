@@ -1,117 +1,109 @@
-# 🎵 PadStudio Live - Sistema Colaborativo de Áudio para Banda ao Vivo
+# PadStudio Live
 
-O **PadStudio Live** transforma um computador ou tablet conectado à mesa de som no **HOST de Áudio**, permitindo que os músicos controlem os sons diretamente de seus celulares e tablets via rede Wi-Fi local ou nuvem persistente, com **latência ultrabaixa (< 10 ms)**.
+Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet ligado à mesa de som é o **host** (a saída de áudio). Os músicos controlam tudo pelo celular, pela rede local ou pela internet.
 
----
+## Como usar
 
-## ☁️ Deploy em Nuvem Persistente (Railway ou Render)
+1. **No aparelho da mesa:** abra o app e toque em **Criar sala**. Os PINs são opcionais.
+2. **Nos celulares:** escaneie o QR Code da sala (toque no código, no canto superior esquerdo) ou digite o código de 4 caracteres e escolha a função.
+3. **Para tocar sozinho,** sem sala, use **Tocar sem sala**.
 
-Diferente de plataformas serverless (como a Vercel, que não mantêm WebSockets abertos nem estado em memória), o PadStudio Live deve ser executado em um **serviço Node.js contínuo com WebSockets bidirecionais (`TCP_NODELAY`) e volume persistente**.
+| Recurso | O que faz |
+| --- | --- |
+| Pads | 12 tons × 8 timbres em loop contínuo. Ao trocar de timbre, o som atual continua até o novo carregar e então faz crossfade. |
+| Bateria | 5 kits com 8 sons cada. No computador, use as teclas Q W E R · A S D F. |
+| Click | BPM, tap, compasso, 4 sons, colcheias, modo **Só contagem** (um compasso e para) e pan para mandar o click só ao fone da banda. |
+| Músicas | Vários repertórios, arrastar para reordenar, anotações por música, **Próxima** e ±½ tom ao vivo. |
+| Mixer | Volume de pads, bateria, click e master, sincronizado com a sala. |
+| Permissões | O host escolhe o que tecladista, baterista e líder podem controlar (tela da sala). |
+| MIDI | Em **Ajustes**: qualquer nota toca o pad do mesmo tom e o pedal de sustain avança para a próxima música. Funciona no Chrome e no Edge. |
+| Sem internet | Em **Ajustes**, **Baixar todos os sons** (~85 MB) deixa o app tocando com a internet instável. Requer HTTPS. |
+| Conta da banda | Os repertórios ficam salvos na conta e aparecem em qualquer aparelho. |
 
-### 1. Deploy no Railway (Recomendado - Passo a Passo Exato)
-1. Crie ou acesse sua conta em [railway.app](https://railway.app/).
-2. No seu painel (Dashboard), clique no botão **"New Project"**.
-3. Selecione a opção **"Deploy from GitHub repo"** e escolha o repositório privado do `PadStudio-Live`.
-4. O Railway detectará o arquivo `Procfile` e o `package.json` de forma 100% automática.
-5. Clique no card do serviço recém-criado e acesse a aba **"Variables"**:
-   - Clique em **"Add Variable"** e defina `NODE_ENV` com o valor `production`.
-   - Clique em **"Add Variable"** e defina `JWT_SECRET` com uma chave segura de 32+ caracteres (ex: execute `openssl rand -hex 32` no seu terminal e cole o resultado).
-   - Clique em **"Add Variable"** e defina `DATA_DIR` com o valor `/app/data`.
-6. Acesse a aba **"Volumes"** do serviço:
-   - Clique em **"Add Volume"** (ou **"Mount Volume"**).
-   - Defina o **Mount Path** exatamente como: `/app/data`.
-   - Salve. Isso garante que o banco de dados (SQLite/JSON) com as contas, salas e repertórios fique gravado permanentemente mesmo quando houver novos deploys.
-7. Acesse a aba **"Settings"** -> role até **"Networking"** -> clique no botão **"Generate Domain"** para receber sua URL pública segura com SSL (`https://padstudio-live.up.railway.app`).
+Se a aba do host for fechada, ao reabrir o app aparece **Voltar para a sala**. A banda continua na mesma sala, com mixer, permissões e repertório recuperados.
 
-### 2. Deploy no Render (Alternativa)
-1. Acesse [render.com](https://render.com/) e clique no botão azul **"New +"** -> selecione **"Web Service"**.
-2. Conecte sua conta do GitHub e selecione o repositório `PadStudio-Live`.
-3. Preencha os campos da tela de configuração:
-   - **Name:** `padstudio-live`
-   - **Region:** Selecione a região mais próxima (ex: Ohio ou Frankfurt).
-   - **Branch:** `main`
-   - **Runtime:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Health Check Path:** `/health` (o Render usará para verificar se o serviço e o disco estão operacionais).
-4. Em **Environment Variables**, adicione:
-   - `NODE_ENV`: `production`
-   - `JWT_SECRET`: sua chave segura gerada via terminal.
-   - `DATA_DIR`: `/var/data`
-5. Na seção **Disks** (requer plano com suporte a disco persistente):
-   - Clique em **"Add Disk"**.
-   - Defina o **Name**: `padstudio-data`.
-   - Defina o **Mount Path**: `/var/data`.
-   - Defina o **Size**: 1 GB.
-6. Clique no botão inferior **"Create Web Service"**. O Render fará o build e fornecerá sua URL pública.
+## Rodar localmente
 
-### 3. Conexão Cliente-Servidor (Zero Config)
-- **Mesmo domínio (padrão):** O app usa automaticamente `window.location.host` e se conecta via `wss://` (ou `ws://`) sem precisar de configuração alguma.
-- **Frontend hospedado separadamente:** Se hospedar o HTML em outro servidor, basta definir antes do `app.js`:
-  ```html
-  <script>window.PADSTUDIO_WS_URL = "wss://seu-servico.up.railway.app";</script>
-  ```
-
----
-
-## 🚀 Como Iniciar no Modo Local (Offline no Wi-Fi do Ensaio)
-
-Ideal para shows, cultos e ensaios **sem depender de internet**:
+Requer Node.js 22 ou mais novo.
 
 ```bash
-# 1. Instalar as dependências
 npm install
-
-# 2. Iniciar o servidor local
-npm start
+npm start          # http://localhost:3000 e o IP da rede local no terminal
+npm run dev        # reinicia sozinho ao salvar arquivos do servidor
 ```
 
-O terminal exibirá os endereços:
-* **No computador/mesa:** `http://localhost:3000`
-* **Nos celulares dos músicos (mesmo Wi-Fi):** `http://<IP-LOCAL>:3000` (ex: `http://192.168.1.15:3000`)
-* O QR Code gerado na tela do HOST usa o IP local real automaticamente.
+### HTTPS na rede local
 
----
+Com HTTPS, os celulares mantêm a tela acesa, instalam o app e guardam os sons offline.
 
-## 🔒 HTTPS Local com `mkcert` (Para PWA e Wake Lock no Celular)
-
-Navegadores móveis (Safari no iOS e Chrome no Android) exigem conexão segura (**HTTPS**) para:
-1. **Wake Lock API:** Manter a tela do celular sempre acesa durante o culto.
-2. **PWA (Instalar na tela inicial):** Instalar como app nativo em tela cheia.
-
-### Passo a passo no Mac:
 ```bash
-# 1. Instalar o mkcert
-brew install mkcert
-mkcert -install
-
-# 2. Descubra seu IP local (ex: 192.168.1.15) e gere os certificados na raiz do projeto:
-mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 <SEU-IP-LOCAL>
-
-# 3. Reinicie o servidor:
-npm start
+npm run cert       # gera key.pem e cert.pem (usa mkcert se instalado; senão, openssl)
+npm start          # sobe em https:// automaticamente
 ```
-O servidor detectará automaticamente `key.pem` e `cert.pem` e iniciará em `https://`.
 
----
+Sem HTTPS o app funciona normalmente. Para a tela não apagar, ele usa um vídeo mudo em loop.
 
-## 🎛️ Otimização dos Arquivos de Áudio
+## Qualidade
 
-- Os 96 timbres contínuos de pads foram otimizados de WAV (610 MB) para **AAC M4A a 160 kbps** (70 MB):
-  - Redução de tamanho de **653 MB para 113 MB total**.
-  - O áudio toca o swell inicial de ataque uma única vez e entra em loop contínuo de sustentação com crossfade senoidal de igual potência pré-renderizado.
-  - **Validação Objetiva Concluída (100% de Aprovação):** Todos os 96 pads cumprem os critérios de variação de volume na emenda $\le 1.5$ dB e salto de amostra $\le 0.02$.
-  - Para auditar ou verificar as métricas de cada arquivo, execute:
-    ```bash
-    node scripts/generate-official-table.js
-    ```
-  - Compatibilidade universal com Web Audio API em iOS, Android, macOS e Windows.
-- Os arquivos originais WAV não compactados estão preservados em backup local em `_audio_backup_wav/` fora do pacote de deploy.
+```bash
+npm test           # 24 testes: servidor real + WebSocket, segurança, biblioteca, permissões, catálogo de áudio
+npm run lint       # ESLint
+npm run check      # os dois
+```
 
----
+## Deploy (Railway ou Render)
 
-## 🛡️ Endpoints de Verificação e Health Check
+O servidor precisa de um processo Node contínuo, por causa dos WebSockets e do estado em memória, e de um disco persistente para o SQLite.
 
-- `GET /health` -> Retorna status operacional, uptime e timestamp (para balanceadores e monitoramento).
-- `GET /api/server-info` -> Retorna os IPs de rede local e porta.
-- `GET /api/auth/me` -> Perfil da banda e repertório na nuvem (protegido por JWT).
+| Variável | Valor |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `JWT_SECRET` | Chave longa e aleatória (`openssl rand -hex 32`). Obrigatória em produção. |
+| `DATA_DIR` | Pasta do volume persistente: Railway `/app/data`, Render `/var/data` |
+
+**Railway:** crie um projeto em New Project → Deploy from GitHub repo, defina as variáveis e adicione um Volume em `/app/data`. Depois, em Networking, use Generate Domain.
+
+**Render:** crie um Web Service com o comando de build `npm install` e o de start `npm start`. Defina as variáveis e adicione um Disk em `/var/data`.
+
+Se o front-end ficar em outro domínio, defina `window.PADSTUDIO_WS_URL = "wss://seu-servico"` antes de carregar `js/main.js`.
+
+## Estrutura
+
+```
+public/
+  index.html, styles.css, sw.js        interface e app offline (PWA)
+  js/main.js                           ponto de entrada
+  js/catalog.js                        timbres, kits e clicks (fonte única)
+  js/audio-engine.js                   motor de áudio do host/solo
+  js/library.js                        repertórios
+  js/permissions.js                    o que cada função pode fazer
+  js/store.js, js/actions.js           estado e ações (tudo passa por dispatch)
+  js/net.js, js/midi.js, js/wake.js    sala, MIDI e tela acesa
+  js/views/*.js                        telas
+server/
+  server.js        HTTP + WebSocket
+  rooms.js         salas, estado e persistência
+  routes.js        API (/api/auth, /api/rooms, /api/qr)
+  permissions.js   mesma tabela do app (um teste garante)
+  rate-limit.js    limites de tentativas (PIN, códigos de sala, login)
+  db.js            SQLite
+tests/             testes automáticos (npm test); tests/manual/ tem os roteiros antigos
+tools/             calibração dos loops (em desenvolvimento: /dev/loop-test)
+scripts/           certificado HTTPS, conversão de áudio, Git LFS, calibração
+audio/             pads em M4A (com loop calibrado em pad-loops.json), bateria e clicks em FLAC
+```
+
+## Áudio
+
+- **Pads:** 96 arquivos AAC/M4A (~71 MB). O ataque toca uma vez e o corpo entra em loop com crossfade senoidal calibrado. Todos têm emenda de no máximo 1,5 dB (`node scripts/generate-official-table.js`).
+- **Bateria e clicks:** FLAC, sem perda. Saem idênticos aos WAV originais amostra a amostra e são 70% menores. Não foram para M4A porque o AAC adiciona 20–40 ms de silêncio no início de cada som.
+- **Originais:** os WAV ficam em `_audio_backup_wav/`, fora do Git e do deploy.
+- **Ao substituir um arquivo de áudio mantendo o nome,** aumente `AUDIO_CACHE` em `public/js/audio-engine.js`, para os aparelhos baixarem a versão nova.
+
+## Endpoints
+
+- `GET /health`: estado do servidor e do disco
+- `GET /api/server-info`: IPs da rede local e porta
+- `POST /api/auth/register` · `POST /api/auth/login` · `GET /api/auth/me`
+- `GET` e `PUT /api/auth/library`: repertórios da conta
+- `GET /api/qr?text=`: QR Code

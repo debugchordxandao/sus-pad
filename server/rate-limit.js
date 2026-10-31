@@ -85,11 +85,14 @@ function createWindowLimiter({ max = 20, windowMs = 10 * 60 * 1000 } = {}) {
 
 // Instâncias compartilhadas
 const pinLimiter = createFailureLimiter({ maxFailures: 5, lockMs: 10 * 60 * 1000, label: 'PIN de sala' });
+// Códigos de sala inexistentes: impede descobrir salas sem PIN testando códigos
+const roomLookupLimiter = createFailureLimiter({ maxFailures: 10, lockMs: 10 * 60 * 1000, label: 'Código de sala' });
 const authLimiter = createWindowLimiter({ max: 20, windowMs: 10 * 60 * 1000 });
 
 setInterval(() => {
   pinLimiter.prune();
+  roomLookupLimiter.prune();
   authLimiter.prune();
 }, 5 * 60 * 1000).unref();
 
-module.exports = { getClientIp, pinLimiter, authLimiter };
+module.exports = { getClientIp, pinLimiter, roomLookupLimiter, authLimiter, createFailureLimiter };

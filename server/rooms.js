@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const { WebSocket } = require('ws');
 const { saveRoomDb, loadActiveRoomsDb, deleteRoomDb } = require('./db');
+const { defaultPermissions, normalizePermissions, isCommandAllowed } = require('./permissions');
 
 // Room Characters (ambiguity-free alphanumeric)
 const ROOM_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -35,7 +36,7 @@ const rooms = new Map();
         roomPin: r.roomPin,
         leaderPin: r.leaderPin,
         clients: new Set(),
-        permissions: r.permissions || { keyboardist: true, drummer: true, leader: true },
+        permissions: normalizePermissions(r.permissions),
         state: r.state,
         createdAt: r.createdAt,
         lastActivity: r.lastActivity
@@ -66,31 +67,9 @@ function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId =
     roomPin: roomPin ? String(roomPin).trim() : null,
     leaderPin: leaderPin ? String(leaderPin).trim() : null,
     clients: new Set(),
-    permissions: {
-      keyboardist: true,
-      drummer: true,
-      leader: true
-    },
-    state: {
-      activeToneIndex: null,
-      padPreset: 'shimmer_2',
-      padVolume: 90,
-      bpm: 120,
-      timeSig: '4/4',
-      metroPlaying: false,
-      metroVolume: 80,
-      metroPan: 0,
-      drumVolume: 85,
-      drumKit: 'kit_3',
-      masterVolume: 90,
-      activeSongId: null,
-      setlist: [
-        { id: '1', title: 'A Casa é Sua', keyIndex: 7, bpm: 130, timeSig: '4/4', preset: 'warm_pad' },
-        { id: '2', title: 'Ousado Amor', keyIndex: 8, bpm: 68, timeSig: '6/8', preset: 'pad_shimmer' },
-        { id: '3', title: 'Lindo És', keyIndex: 0, bpm: 72, timeSig: '4/4', preset: 'worship' },
-        { id: '4', title: 'Ruja o Leão', keyIndex: 2, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
-      ]
-    },
+    permissions: defaultPermissions(),
+    // O host envia o estado completo assim que entra na sala
+    state: {},
     createdAt: Date.now(),
     lastActivity: Date.now()
   };
@@ -109,7 +88,7 @@ function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId =
 }
 
 function getRoom(code) {
-  if (!code) return null;
+  if (typeof code !== 'string' || !code) return null;
   return rooms.get(code.toUpperCase().trim()) || null;
 }
 
@@ -190,28 +169,11 @@ function notifyRoomMembers(code) {
   });
 }
 
-// Role Permissions Validation - LIBERADO PARA TODOS OS CONTROLES REMOTOS
+/** Um controle remoto pode enviar este comando? (tabela em ./permissions.js) */
 function isActionAllowed(role, msg, permissions) {
-  const actionType = msg.type;
-
-  // Only host socket can ever broadcast host_state_update
-  if (actionType === 'host_state_update') {
-    return role === 'host';
-  }
-
-  // Host tem acesso irrestrito
-  if (role === 'host') return true;
-
-  // Todos os controles remotos conectados têm acesso total aos recursos da banda
-  const allowed = [
-    'pad_on', 'pad_off', 'pad_preset',
-    'drum', 'drum_hit', 'drum_kit',
-    'metro', 'bpm', 'timesig', 'metro_pan',
-    'volume', 'panic',
-    'song_activate', 'setlist_update', 'setlist_add', 'setlist_edit', 'setlist_delete',
-    'permission_toggle', 'ping'
-  ];
-  return allowed.includes(actionType);
+  if (msg.type === 'host_state_update' || msg.type === 'set_permissions') return role === 'host';
+  if (msg.type === 'ping') return true;
+  return isCommandAllowed(role, msg.type, permissions);
 }
 
 function formatRoleName(role) {
@@ -225,16 +187,25 @@ function formatRoleName(role) {
 }
 
 // Auto-cleanup stale rooms after 15 minutes of inactivity without clients
+const ROOM_TTL_MS = 15 * 60 * 1000;
 setInterval(() => {
   const now = Date.now();
   for (const [code, room] of rooms.entries()) {
     const totalClients = room.clients ? room.clients.size : 0;
-    if (totalClients === 0 && (now - room.lastActivity > 15 * 60 * 1000)) {
+    if (totalClients === 0 && (now - room.lastActivity > ROOM_TTL_MS)) {
       deleteRoom(code);
       console.log(`[Auto-Cleanup] Sala expirada removida do cache e do SQLite: ${code}`);
     }
   }
-}, 60000);
+}, 60000).unref();
+
+/** Altera as permissões da sala (só o host chama). */
+function setRoomPermissions(room, raw) {
+  room.permissions = normalizePermissions(raw);
+  room.lastActivity = Date.now();
+  scheduleSave(room);
+  return room.permissions;
+}
 
 module.exports = {
   rooms,
@@ -245,6 +216,7 @@ module.exports = {
   broadcastToRoom,
   notifyRoomMembers,
   isActionAllowed,
+  setRoomPermissions,
   formatRoleName,
   flushAllRooms
 };

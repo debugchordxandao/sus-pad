@@ -880,3 +880,162 @@ input[type="range"]::-moz-range-thumb { width: 28px; height: 28px; border: 0; bo
   .pane-bar .plain-select { font-size: 20px; }
   .segmented--sm > button { min-width: 30px; padding: 0 8px; }
 }
+
+/* ==========================================================================
+   Componentes adicionados na versão modular
+   ========================================================================== */
+
+.btn-sm { height: 32px; padding: 0 14px; border-radius: 16px; font-size: 15px; }
+.btn:disabled, .text-btn:disabled { opacity: 0.35; pointer-events: none; }
+
+/* Switch no estilo iOS (checkbox nativo: acessível e funciona com teclado) */
+.switch {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  margin-left: auto;
+  border-radius: 16px;
+  background: var(--fill-2);
+  cursor: pointer;
+  transition: background 0.25s var(--ease);
+}
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 27px; height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s var(--ease);
+}
+.switch:checked { background: var(--green); }
+.switch:checked::before { transform: translateX(20px); }
+.switch:disabled { opacity: 0.4; }
+.switch--sm { width: 40px; height: 24px; margin: 0; }
+.switch--sm::before { width: 20px; height: 20px; }
+.switch--sm:checked::before { transform: translateX(16px); }
+
+.row-textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  resize: none;
+}
+.row-textarea::placeholder { color: var(--label-3); }
+.row-textarea:focus-visible { outline: none; }
+.hidden-row:has(.row-value:empty) { display: none; }
+
+/* Barra da tela */
+.pane-bar-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.loading-label { color: var(--label-2); font-size: 15px; white-space: nowrap; animation: breathe 1.4s ease-in-out infinite; }
+
+/* Barra da música atual */
+.song-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px calc(var(--gutter) + var(--safe-right)) 10px calc(var(--gutter) + var(--safe-left));
+  border-bottom: 0.5px solid var(--separator);
+  background: var(--bg);
+}
+.song-strip-text { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 2px; }
+.song-strip-text strong { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.song-strip-text span { color: var(--label-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+.song-strip-notes { flex-basis: 100%; color: var(--yellow) !important; font-size: 14px !important; }
+.song-strip-notes:empty { display: none; }
+.song-strip-actions { flex: none; display: flex; align-items: center; gap: 8px; }
+
+/* Click: − BPM + */
+.metro-bpm-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.round-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--label);
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+  flex: none;
+}
+.round-btn:active { background: var(--fill-2); }
+
+/* Reordenar músicas */
+.song-handle { display: none; }
+.songs-list.editing .song-play-btn { display: none; }
+.songs-list.editing .song-handle {
+  display: block;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  margin-right: -10px;
+  cursor: grab;
+  touch-action: none;
+}
+.songs-list.editing .song-handle::before {
+  content: '';
+  position: absolute;
+  left: 13px; right: 13px; top: 16px;
+  height: 12px;
+  background:
+    linear-gradient(var(--label-3), var(--label-3)) top / 100% 2px no-repeat,
+    linear-gradient(var(--label-3), var(--label-3)) center / 100% 2px no-repeat,
+    linear-gradient(var(--label-3), var(--label-3)) bottom / 100% 2px no-repeat;
+}
+.setlist-item.dragging {
+  z-index: 2;
+  background: var(--bg-3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: var(--r);
+}
+.setlist-item.dragging::before, .setlist-item.dragging + .setlist-item::before { opacity: 0; }
+
+/* Permissões */
+.permissions-grid { text-align: left; }
+.perm-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr repeat(3, 64px);
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px 0 16px;
+}
+.perm-row + .perm-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+.perm-head { min-height: 34px; }
+.perm-role { color: var(--label-2); font-size: 12px; text-align: center; }
+.perm-cell { display: flex; justify-content: center; }
+
+.sync-status:empty { display: none; }
+.sync-status { font-size: 13px; }
+
+/* Recursos que a função não pode usar somem da tela */
+body.no-pads #nav-seg-pads, body.no-pads #btn-pad-stop,
+body.no-drums #nav-seg-drums,
+body.no-metro #nav-seg-metro, body.no-metro .quick-metro-pill,
+body.no-setlist #nav-seg-setlist, body.no-setlist .song-strip-actions,
+body.no-mixer #nav-seg-mixer,
+body.no-panic #btn-panic { display: none !important; }
+
+@media (max-width: 420px) {
+  .song-strip { flex-wrap: wrap; row-gap: 8px; }
+  .song-strip-actions { margin-left: auto; }
+  .round-btn { width: 44px; height: 44px; }
+}
+
+.row > .row-value { margin-left: auto; text-align: right; }
+.plain-select { field-sizing: content; }

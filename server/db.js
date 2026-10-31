@@ -175,12 +175,43 @@ function saveUserSetlist(userId, songs) {
   });
 }
 
-const stmtGetSetlist = db.prepare('SELECT songs_json FROM setlists WHERE user_id = ?');
+const stmtGetSetlist = db.prepare('SELECT songs_json, updated_at FROM setlists WHERE user_id = ?');
 function getUserSetlist(userId) {
   const row = stmtGetSetlist.get(userId);
   if (!row || !row.songs_json) return null;
   try {
     return JSON.parse(row.songs_json);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Biblioteca de repertórios ({ version: 2, lists, activeListId, updatedAt }).
+ * Usa a mesma tabela do repertório antigo: um array antigo vira uma biblioteca com uma lista.
+ */
+function saveUserLibrary(userId, library) {
+  stmtSaveSetlist.run({
+    user_id: userId,
+    songs_json: JSON.stringify(library),
+    updated_at: new Date().toISOString()
+  });
+}
+
+function getUserLibrary(userId) {
+  const row = stmtGetSetlist.get(userId);
+  if (!row || !row.songs_json) return null;
+  try {
+    const data = JSON.parse(row.songs_json);
+    if (Array.isArray(data)) {
+      return {
+        version: 2,
+        lists: [{ id: 'principal', name: 'Repertório', songs: data }],
+        activeListId: 'principal',
+        updatedAt: Date.parse(row.updated_at) || 0
+      };
+    }
+    return data;
   } catch (e) {
     return null;
   }
@@ -242,6 +273,8 @@ module.exports = {
   createUser,
   saveUserSetlist,
   getUserSetlist,
+  saveUserLibrary,
+  getUserLibrary,
   saveRoomDb,
   loadActiveRoomsDb,
   deleteRoomDb

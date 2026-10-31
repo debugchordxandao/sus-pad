@@ -14,15 +14,10 @@ const {
   validateRolePin
 } = require('./auth');
 const db = require('./db');
-const { getClientIp, pinLimiter, authLimiter } = require('./rate-limit');
-const {
-  createRoom,
-  getRoom,
-  broadcastToRoom,
-  notifyRoomMembers,
-  isActionAllowed,
-  formatRoleName
-} = require('./rooms');
+const { getClientIp, pinLimiter, roomLookupLimiter, authLimiter } = require('./rate-limit');
+
+const MAX_LIBRARY_BYTES = 200 * 1024;
+const { createRoom, getRoom } = require('./rooms');
 
 const router = express.Router();
 
@@ -137,6 +132,27 @@ router.post('/auth/setlist', authMiddleware, (req, res) => {
   res.json({ message: 'Repertório salvo na nuvem com sucesso!' });
 });
 
+// Biblioteca de repertórios da conta (vários repertórios). O app envia a cada alteração.
+router.get('/auth/library', authMiddleware, (req, res) => {
+  res.json({ library: db.getUserLibrary(req.user.id) });
+});
+
+router.put('/auth/library', authMiddleware, (req, res) => {
+  const { library } = req.body || {};
+  if (!library || typeof library !== 'object' || !Array.isArray(library.lists) || library.lists.length > 50) {
+    return res.status(400).json({ error: 'Formato de biblioteca inválido.' });
+  }
+  if (library.lists.some(l => !l || typeof l !== 'object' || !Array.isArray(l.songs) || l.songs.length > 300)) {
+    return res.status(400).json({ error: 'Repertório inválido.' });
+  }
+  const json = JSON.stringify(library);
+  if (json.length > MAX_LIBRARY_BYTES) {
+    return res.status(413).json({ error: 'Biblioteca grande demais.' });
+  }
+  db.saveUserLibrary(req.user.id, { ...library, updatedAt: Number(library.updatedAt) || Date.now() });
+  res.json({ ok: true });
+});
+
 // ==========================================
 // 2. ROOM & PIN VALIDATION ENDPOINTS
 // ==========================================
@@ -168,9 +184,13 @@ router.post('/rooms/validate-pin', (req, res) => {
   const rate = pinLimiter.check(ip);
   if (!rate.allowed) return res.status(429).json({ error: rate.message });
 
+  const lookup = roomLookupLimiter.check(ip);
+  if (!lookup.allowed) return res.status(429).json({ error: lookup.message });
+
   const { roomCode, role, pin } = req.body;
   const room = getRoom(typeof roomCode === 'string' ? roomCode : '');
   if (!room) {
+    roomLookupLimiter.fail(ip);
     return res.status(404).json({ error: 'Sala não encontrada.' });
   }
 
@@ -186,8 +206,12 @@ router.post('/rooms/validate-pin', (req, res) => {
 
 // Get Room State
 router.get('/rooms/:code/state', (req, res) => {
+  const ip = getClientIp(req);
+  const lookup = roomLookupLimiter.check(ip);
+  if (!lookup.allowed) return res.status(429).json({ error: lookup.message });
   const room = getRoom(req.params.code);
   if (!room) {
+    roomLookupLimiter.fail(ip);
     return res.status(404).json({ error: 'Sala não encontrada.' });
   }
 
