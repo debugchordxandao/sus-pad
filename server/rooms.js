@@ -4,6 +4,7 @@
  * and SQLite persistence across server reboots.
  */
 
+const crypto = require('crypto');
 const { WebSocket } = require('ws');
 const { saveRoomDb, loadActiveRoomsDb, deleteRoomDb } = require('./db');
 
@@ -13,7 +14,7 @@ const ROOM_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 function generateRoomCode() {
   let code = '';
   for (let i = 0; i < 4; i++) {
-    code += ROOM_CHARS[Math.floor(Math.random() * ROOM_CHARS.length)];
+    code += ROOM_CHARS[crypto.randomInt(ROOM_CHARS.length)];
   }
   return code;
 }
@@ -54,7 +55,8 @@ function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId =
     code = generateRoomCode();
   }
 
-  const hostToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  // Token do host dá controle total da sala: precisa ser imprevisível
+  const hostToken = crypto.randomBytes(24).toString('base64url');
 
   const room = {
     code,
@@ -83,10 +85,10 @@ function createRoom({ hostWs = null, roomPin = null, leaderPin = null, ownerId =
       masterVolume: 90,
       activeSongId: null,
       setlist: [
-        { id: '1', title: '01. A Casa é Sua', keyIndex: 7, bpm: 130, timeSig: '4/4', preset: 'warm_pad' },
-        { id: '2', title: '02. Ousado Amor', keyIndex: 8, bpm: 68, timeSig: '6/8', preset: 'pad_shimmer' },
-        { id: '3', title: '03. Lindo És', keyIndex: 0, bpm: 72, timeSig: '4/4', preset: 'worship' },
-        { id: '4', title: '04. Ruja o Leão', keyIndex: 2, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
+        { id: '1', title: 'A Casa é Sua', keyIndex: 7, bpm: 130, timeSig: '4/4', preset: 'warm_pad' },
+        { id: '2', title: 'Ousado Amor', keyIndex: 8, bpm: 68, timeSig: '6/8', preset: 'pad_shimmer' },
+        { id: '3', title: 'Lindo És', keyIndex: 0, bpm: 72, timeSig: '4/4', preset: 'worship' },
+        { id: '4', title: 'Ruja o Leão', keyIndex: 2, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
       ]
     },
     createdAt: Date.now(),
@@ -114,6 +116,8 @@ function getRoom(code) {
 function deleteRoom(code) {
   if (!code) return false;
   const upper = code.toUpperCase().trim();
+  clearTimeout(pendingSaves.get(upper));
+  pendingSaves.delete(upper);
   deleteRoomDb(upper);
   return rooms.delete(upper);
 }
@@ -133,12 +137,34 @@ function broadcastToRoom(room, data, excludeWs = null) {
   }
 }
 
+// Persistência com debounce: o host manda estado a cada toque de pad, mas gravar no
+// SQLite a cada toque bloquearia o event loop no meio da música.
+const SAVE_DEBOUNCE_MS = 1500;
+const pendingSaves = new Map(); // code -> timeout
+
+function scheduleSave(room) {
+  if (pendingSaves.has(room.code)) return;
+  pendingSaves.set(room.code, setTimeout(() => {
+    pendingSaves.delete(room.code);
+    if (rooms.has(room.code)) saveRoomDb(room);
+  }, SAVE_DEBOUNCE_MS));
+}
+
+function flushAllRooms() {
+  for (const [code, timer] of pendingSaves) {
+    clearTimeout(timer);
+    const room = rooms.get(code);
+    if (room) saveRoomDb(room);
+  }
+  pendingSaves.clear();
+}
+
 // Update Room State & Persist
 function updateRoomState(room, partialState) {
   if (!room) return;
   room.state = { ...room.state, ...partialState };
   room.lastActivity = Date.now();
-  saveRoomDb(room);
+  scheduleSave(room);
 }
 
 // Notify room roster & latency
@@ -204,8 +230,7 @@ setInterval(() => {
   for (const [code, room] of rooms.entries()) {
     const totalClients = room.clients ? room.clients.size : 0;
     if (totalClients === 0 && (now - room.lastActivity > 15 * 60 * 1000)) {
-      rooms.delete(code);
-      deleteRoomDb(code);
+      deleteRoom(code);
       console.log(`[Auto-Cleanup] Sala expirada removida do cache e do SQLite: ${code}`);
     }
   }
@@ -220,5 +245,6 @@ module.exports = {
   broadcastToRoom,
   notifyRoomMembers,
   isActionAllowed,
-  formatRoleName
+  formatRoleName,
+  flushAllRooms
 };

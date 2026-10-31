@@ -14,6 +14,7 @@ const {
   validateRolePin
 } = require('./auth');
 const db = require('./db');
+const { getClientIp, pinLimiter, authLimiter } = require('./rate-limit');
 const {
   createRoom,
   getRoom,
@@ -30,14 +31,18 @@ const router = express.Router();
 // ==========================================
 
 // Register User / Band
-router.post('/auth/register', async (req, res) => {
+router.post('/auth/register', authLimiter.middleware, async (req, res) => {
   try {
     const { email, password, name, bandName } = req.body;
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
     }
 
-    if (password.length < 6) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return res.status(400).json({ error: 'E-mail inválido.' });
+    }
+
+    if (password.length < 6 || password.length > 200) {
       return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
     }
 
@@ -67,10 +72,10 @@ router.post('/auth/register', async (req, res) => {
 });
 
 // Login User / Band
-router.post('/auth/login', async (req, res) => {
+router.post('/auth/login', authLimiter.middleware, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ error: 'Informe e-mail e senha.' });
     }
 
@@ -124,7 +129,7 @@ router.get('/auth/me', authMiddleware, (req, res) => {
 // Save User Setlist to Cloud Profile
 router.post('/auth/setlist', authMiddleware, (req, res) => {
   const { songs } = req.body;
-  if (!Array.isArray(songs)) {
+  if (!Array.isArray(songs) || songs.length > 500) {
     return res.status(400).json({ error: 'Formato de repertório inválido.' });
   }
 
@@ -158,17 +163,24 @@ router.post('/rooms/create', optionalAuthMiddleware, (req, res) => {
 
 // Validate PIN before joining
 router.post('/rooms/validate-pin', (req, res) => {
+  // Mesmo limitador do WebSocket: sem ele, o PIN de 4–6 dígitos cairia por força bruta
+  const ip = getClientIp(req);
+  const rate = pinLimiter.check(ip);
+  if (!rate.allowed) return res.status(429).json({ error: rate.message });
+
   const { roomCode, role, pin } = req.body;
-  const room = getRoom(roomCode);
+  const room = getRoom(typeof roomCode === 'string' ? roomCode : '');
   if (!room) {
-    return res.status(404).json({ error: `Sala "${roomCode}" não encontrada.` });
+    return res.status(404).json({ error: 'Sala não encontrada.' });
   }
 
-  const check = validateRolePin(room, role, pin);
+  const check = validateRolePin(room, role, typeof pin === 'string' || typeof pin === 'number' ? String(pin) : '');
   if (!check.valid) {
+    pinLimiter.fail(ip);
     return res.status(403).json({ error: check.message });
   }
 
+  pinLimiter.reset(ip);
   res.json({ valid: true });
 });
 
@@ -195,16 +207,19 @@ router.get('/rooms/:code/state', (req, res) => {
 // QR Code Generator
 router.get('/qr', async (req, res) => {
   const text = req.query.text;
-  if (!text) return res.status(400).send('Missing text query');
+  if (typeof text !== 'string' || !text || text.length > 512) {
+    return res.status(400).json({ error: 'Texto inválido para QR Code.' });
+  }
   try {
+    // Preto no branco: é o que todo leitor de QR reconhece
     const dataUrl = await QRCode.toDataURL(text, {
-      margin: 1,
-      width: 280,
-      color: { dark: '#ffffff', light: '#00000000' }
+      margin: 0,
+      width: 360,
+      color: { dark: '#000000', light: '#ffffff' }
     });
     res.json({ qr: dataUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Falha ao gerar QR Code.' });
   }
 });
 

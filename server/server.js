@@ -12,6 +12,7 @@ const os = require('os');
 const { WebSocketServer, WebSocket } = require('ws');
 
 const apiRoutes = require('./routes');
+const { getClientIp, pinLimiter } = require('./rate-limit');
 const { validateRolePin } = require('./auth');
 const {
   rooms,
@@ -21,12 +22,17 @@ const {
   broadcastToRoom,
   notifyRoomMembers,
   isActionAllowed,
-  formatRoleName
+  formatRoleName,
+  flushAllRooms
 } = require('./rooms');
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+
+// Limites de tamanho: o host envia o estado completo (inclui o repertório), controles enviam comandos curtos
+const MAX_CLIENT_MSG_BYTES = 4 * 1024;
+const MAX_HOST_MSG_BYTES = 128 * 1024;
 const keyPath = process.env.SSL_KEY || path.join(__dirname, '../key.pem');
 const certPath = process.env.SSL_CERT || path.join(__dirname, '../cert.pem');
 
@@ -49,11 +55,23 @@ if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
   server = http.createServer(app);
 }
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: MAX_HOST_MSG_BYTES });
 
 // Express Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'same-origin',
+    'X-Frame-Options': 'SAMEORIGIN'
+  });
+  next();
+});
+app.use(express.json({ limit: '256kb' }));
+app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 
 // Health check endpoint for Railway, Render, container monitors (verifies disk write access)
 app.get('/health', (req, res) => {
@@ -87,8 +105,16 @@ app.get('/health', (req, res) => {
 });
 
 // Serve static assets from public/ and audio/
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/audio', express.static(path.join(__dirname, '../audio')));
+// HTML/JS/CSS sempre revalidados (deploy novo aparece na hora); áudio é imutável e fica em cache longo
+app.use(express.static(path.join(__dirname, '../public'), {
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css|json)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
+app.use('/audio', express.static(path.join(__dirname, '../audio'), {
+  maxAge: '30d',
+  immutable: true
+}));
 
 // Test comparison route for loop-test.html (serves original WAVs from backup outside deploy)
 const backupWavPath = path.join(__dirname, '../_audio_backup_wav');
@@ -128,31 +154,17 @@ app.get('/api/server-info', (req, res) => {
   });
 });
 
-// PIN Rate Limiting per IP
-const pinAttemptsByIp = new Map();
 
-function checkPinRateLimit(ip) {
-  const rec = pinAttemptsByIp.get(ip);
-  if (rec && rec.lockedUntil && Date.now() < rec.lockedUntil) {
-    const remainingMin = Math.ceil((rec.lockedUntil - Date.now()) / 60000);
-    return { allowed: false, message: `Muitas tentativas de PIN incorretas. Tente novamente em ${remainingMin} minuto(s).` };
-  }
-  return { allowed: true };
+function sanitizeName(name, fallback) {
+  if (typeof name !== 'string') return fallback;
+  const clean = name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40);
+  return clean || fallback;
 }
 
-function recordFailedPin(ip) {
-  const rec = pinAttemptsByIp.get(ip) || { count: 0, lockedUntil: 0 };
-  rec.count++;
-  if (rec.count >= 5) {
-    rec.lockedUntil = Date.now() + 10 * 60 * 1000; // 10 min lockout
-    rec.count = 0;
-    console.warn(`[SEGURANÇA] IP ${ip} bloqueado temporariamente por 5 tentativas de PIN inválidas.`);
-  }
-  pinAttemptsByIp.set(ip, rec);
-}
-
-function resetPinFailures(ip) {
-  pinAttemptsByIp.delete(ip);
+function sanitizePin(pin) {
+  if (pin === undefined || pin === null || pin === '') return undefined;
+  if (typeof pin !== 'string' && typeof pin !== 'number') return undefined;
+  return String(pin).trim().slice(0, 12);
 }
 
 // Strict Message Schema Validation
@@ -172,8 +184,7 @@ wss.on('connection', (ws, req) => {
     ws._socket.setNoDelay(true);
   }
 
-  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
-  ws.clientIp = clientIp;
+  ws.clientIp = getClientIp(req);
   ws.isAlive = true;
   ws.roomCode = null;
   ws.role = null;
@@ -188,8 +199,9 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('message', (raw) => {
-    // 1. Size limit (max 4096 bytes per message)
-    if (raw.length > 4096) {
+    // 1. Size limit
+    const limit = ws.role === 'host' ? MAX_HOST_MSG_BYTES : MAX_CLIENT_MSG_BYTES;
+    if (raw.length > limit) {
       ws.send(JSON.stringify({ type: 'error', message: 'Mensagem excede o tamanho limite permitido (4 KB).' }));
       return;
     }
@@ -219,7 +231,13 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    handleClientMessage(ws, msg);
+    try {
+      handleClientMessage(ws, msg);
+    } catch (err) {
+      // Uma mensagem malformada nunca pode derrubar a sala inteira
+      console.error(`[WS] Erro ao processar "${msg.type}" de ${ws.clientId}:`, err);
+      safeSend(ws, { type: 'error', message: 'Não foi possível processar o comando.' });
+    }
   });
 
   ws.on('close', () => {
@@ -230,6 +248,12 @@ wss.on('connection', (ws, req) => {
     console.error(`[WS Error ${ws.clientId}]:`, err.message);
   });
 });
+
+function safeSend(ws, data) {
+  if (ws.readyState === WebSocket.OPEN) {
+    try { ws.send(JSON.stringify(data)); } catch (e) { /* conexão caiu */ }
+  }
+}
 
 // Process incoming WebSocket messages
 function handleClientMessage(ws, msg) {
@@ -249,8 +273,8 @@ function handleClientMessage(ws, msg) {
   if (type === 'create_room') {
     const room = createRoom({
       hostWs: ws,
-      roomPin: msg.roomPin,
-      leaderPin: msg.leaderPin
+      roomPin: sanitizePin(msg.roomPin),
+      leaderPin: sanitizePin(msg.leaderPin)
     });
 
     ws.send(JSON.stringify({
@@ -269,7 +293,7 @@ function handleClientMessage(ws, msg) {
 
   // 2b. Reconnect HOST
   if (type === 'reconnect_host') {
-    const code = (msg.roomCode || '').toUpperCase().trim();
+    const code = String(msg.roomCode || '').toUpperCase().trim();
     const token = msg.hostToken;
     const room = getRoom(code);
 
@@ -281,7 +305,7 @@ function handleClientMessage(ws, msg) {
       return;
     }
 
-    if (!token || room.hostToken !== token) {
+    if (typeof token !== 'string' || room.hostToken !== token) {
       ws.send(JSON.stringify({
         type: 'error',
         message: 'Token de anfitrião inválido para esta sala.'
@@ -318,7 +342,7 @@ function handleClientMessage(ws, msg) {
 
   // 3. Room Joining (REMOTE CONTROLLERS)
   if (type === 'join_room') {
-    const code = (msg.roomCode || '').toUpperCase().trim();
+    const code = String(msg.roomCode || '').toUpperCase().trim();
     const room = getRoom(code);
 
     if (!room) {
@@ -341,7 +365,7 @@ function handleClientMessage(ws, msg) {
     }
 
     // PIN Rate Limiting Check
-    const rateCheck = checkPinRateLimit(ws.clientIp);
+    const rateCheck = pinLimiter.check(ws.clientIp);
     if (!rateCheck.allowed) {
       ws.send(JSON.stringify({
         type: 'error',
@@ -351,21 +375,21 @@ function handleClientMessage(ws, msg) {
     }
 
     // PIN Authentication Check
-    const pinCheck = validateRolePin(room, chosenRole, msg.pin || msg.leaderPin);
+    const pinCheck = validateRolePin(room, chosenRole, sanitizePin(msg.pin ?? msg.leaderPin));
     if (!pinCheck.valid) {
-      recordFailedPin(ws.clientIp);
+      pinLimiter.fail(ws.clientIp);
       ws.send(JSON.stringify({
         type: 'error',
         message: pinCheck.message
       }));
       return;
     }
-    resetPinFailures(ws.clientIp);
+    pinLimiter.reset(ws.clientIp);
 
     // Assign role
     ws.roomCode = code;
     ws.role = chosenRole;
-    ws.clientName = msg.name || formatRoleName(ws.role);
+    ws.clientName = sanitizeName(msg.name, formatRoleName(ws.role));
     room.clients.add(ws);
 
     // Confirm connection to controller with current room state
@@ -400,6 +424,7 @@ function handleClientMessage(ws, msg) {
 
   // 5. Host State Confirmation & Broadcast (Persists to SQLite)
   if (ws.role === 'host' && type === 'host_state_update') {
+    if (!msg.state || typeof msg.state !== 'object' || Array.isArray(msg.state)) return;
     updateRoomState(room, msg.state);
     broadcastToRoom(room, {
       type: 'state',
@@ -445,13 +470,28 @@ function handleClientDisconnect(ws) {
 }
 
 // Keep-alive heartbeat (30s interval)
-setInterval(() => {
+const heartbeat = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
     ws.isAlive = false;
     ws.ping();
   });
 }, 30000);
+
+// Encerramento limpo (Railway/Render enviam SIGTERM a cada deploy)
+function shutdown(signal) {
+  console.log(`\n[${signal}] Encerrando: avisando salas e salvando estado...`);
+  clearInterval(heartbeat);
+  for (const client of wss.clients) {
+    safeSend(client, { type: 'server_restarting', message: 'Servidor reiniciando. Reconectando em instantes...' });
+    client.close(1012, 'restart');
+  }
+  flushAllRooms();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Start Server & Print Wi-Fi Connection Information
 server.listen(PORT, '0.0.0.0', () => {

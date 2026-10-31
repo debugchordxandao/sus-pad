@@ -83,10 +83,11 @@ function optionalAuthMiddleware(req, res, next) {
 function validateRolePin(room, role, pin) {
   if (!room) return { valid: false, message: 'Sala não encontrada.' };
 
-  const pinStr = pin ? pin.toString().trim() : '';
+  const pinStr = (typeof pin === 'string' || typeof pin === 'number') ? String(pin).trim() : '';
 
   // 1. Leader Role Verification
   if (role === 'leader' && room.leaderPin && room.leaderPin.trim() !== '') {
+    if (!pinStr) return { valid: false, message: 'Digite o PIN do líder.' };
     if (pinStr !== room.leaderPin.trim()) {
       return { valid: false, message: 'PIN exclusivo de Líder incorreto.' };
     }
@@ -95,6 +96,7 @@ function validateRolePin(room, role, pin) {
 
   // 2. Room Access PIN Verification
   if (room.roomPin && room.roomPin.trim() !== '') {
+    if (!pinStr) return { valid: false, message: 'Esta sala pede um PIN.' };
     if (pinStr !== room.roomPin.trim()) {
       return { valid: false, message: 'PIN de acesso da sala incorreto.' };
     }

@@ -3,7 +3,7 @@
  * Cache com versão, estratégia Network-First para HTML/JS e Cache-First para assets estáticos.
  */
 
-const CACHE_NAME = 'padstudio-live-v3';
+const CACHE_NAME = 'padstudio-live-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

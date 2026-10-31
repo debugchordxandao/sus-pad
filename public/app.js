@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function goToStage() {
     screenGateway.classList.remove('active');
     screenStage.classList.add('active');
+    attachBeatVisuals();
     applyRoleUI(myRole);
     requestWakeLock();
     renderGrid();
@@ -205,13 +206,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputJoinPin = document.getElementById('input-join-pin');
   if (selectGatewayRole && inputJoinPin) {
     selectGatewayRole.addEventListener('change', () => {
-      if (selectGatewayRole.value === 'leader') {
-        inputJoinPin.classList.remove('hidden');
-        inputJoinPin.placeholder = 'PIN do Líder (se configurado)';
-      } else {
-        inputJoinPin.placeholder = 'PIN de Acesso (se exigido)';
-      }
+      inputJoinPin.placeholder = selectGatewayRole.value === 'leader' ? 'PIN do líder' : 'PIN da sala';
     });
+  }
+
+  // O campo de PIN só aparece quando a sala pede um
+  function revealJoinPin() {
+    if (!inputJoinPin) return;
+    const wasHidden = inputJoinPin.classList.contains('hidden');
+    inputJoinPin.classList.remove('hidden');
+    inputJoinPin.value = '';
+    if (wasHidden || document.activeElement !== inputJoinPin) inputJoinPin.focus();
   }
 
   // 1. CRIAR SALA (HOST)
@@ -266,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     myRole = 'solo';
     audioEngine = new window.PadStudioAudioEngine();
     await audioEngine.unlock();
-    document.getElementById('header-room-display').textContent = 'SOLO';
+    document.getElementById('header-room-display').textContent = 'Solo';
     goToStage();
   });
 
@@ -282,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('padstudio_room_code', msg.roomCode);
         sessionStorage.setItem('padstudio_role', 'host');
         if (msg.hostToken) sessionStorage.setItem('padstudio_host_token', msg.hostToken);
-        document.getElementById('header-room-display').textContent = `SALA: ${msg.roomCode}`;
+        document.getElementById('header-room-display').textContent = msg.roomCode;
         document.getElementById('modal-lbl-code').textContent = msg.roomCode;
         hideStatusBanner();
         loadQrCode(msg.roomCode);
@@ -296,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
           hostToken = msg.hostToken;
           sessionStorage.setItem('padstudio_host_token', msg.hostToken);
         }
-        document.getElementById('header-room-display').textContent = `SALA: ${msg.roomCode}`;
+        document.getElementById('header-room-display').textContent = msg.roomCode;
         document.getElementById('modal-lbl-code').textContent = msg.roomCode;
         hideStatusBanner();
         showToast('HOST restabeleceu a sala!', 'success');
@@ -311,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('padstudio_room_code', msg.roomCode);
         sessionStorage.setItem('padstudio_role', msg.role);
         sessionStorage.removeItem('padstudio_host_token');
-        document.getElementById('header-room-display').textContent = `SALA: ${msg.roomCode}`;
+        document.getElementById('header-room-display').textContent = msg.roomCode;
         document.getElementById('modal-lbl-code').textContent = msg.roomCode;
         hideStatusBanner();
         goToStage();
@@ -341,10 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       case 'error': {
-        showToast(msg.message || 'Erro na sala', 'error');
-        if (gatewayError) {
-          gatewayError.textContent = msg.message;
+        const onGateway = screenGateway.classList.contains('active');
+        if (onGateway && gatewayError) {
+          gatewayError.textContent = msg.message || 'Não foi possível entrar.';
           gatewayError.classList.remove('hidden');
+          if (/PIN/i.test(msg.message || '')) revealJoinPin();
+        } else {
+          showToast(msg.message || 'Erro na sala', 'error');
         }
         break;
       }
@@ -491,8 +499,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (panSlider) panSlider.value = msg.value;
           const label = document.getElementById('pan-current-label');
           if (label) {
-            if (msg.value < -0.2) label.textContent = 'Só Fone (L)';
-            else if (msg.value > 0.2) label.textContent = 'Direito (R)';
+            if (msg.value < -0.2) label.textContent = 'Esquerda';
+            else if (msg.value > 0.2) label.textContent = 'Direita';
             else label.textContent = 'Centro';
           }
           broadcastHostState();
@@ -501,8 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       case 'setlist_add': {
         if (myRole === 'host') {
-          const s = msg.song;
-          setlist.addSong(s.title, s.keyIndex, s.bpm, s.timeSig, s.preset);
+          setlist.addSong(msg.song);
           renderSetlist();
           broadcastHostState();
         }
@@ -563,8 +570,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (panSlider) panSlider.value = state.metroPan;
       const label = document.getElementById('pan-current-label');
       if (label) {
-        if (state.metroPan < -0.2) label.textContent = 'Só Fone (L)';
-        else if (state.metroPan > 0.2) label.textContent = 'Direito (R)';
+        if (state.metroPan < -0.2) label.textContent = 'Esquerda';
+        else if (state.metroPan > 0.2) label.textContent = 'Direita';
         else label.textContent = 'Centro';
       }
       if (audioEngine) audioEngine.setMetronomePan(state.metroPan);
@@ -574,9 +581,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.metroVolume !== undefined) updateVolumeUI('metro', state.metroVolume);
     if (state.masterVolume !== undefined) updateVolumeUI('master', state.masterVolume);
     if (state.setlist) {
-      setlist.songs = state.setlist;
+      setlist.replaceAll(state.setlist);
       renderSetlist();
     }
+    paintAllRanges();
     if (state.activeSongId !== undefined) {
       setlist.activeSongId = state.activeSongId;
       renderSetlist();
@@ -786,6 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tonesGrid = document.getElementById('tones-grid');
   const activeToneNameEl = document.getElementById('active-tone-name');
   const padPulseEl = document.getElementById('pad-pulse');
+  const dockEl = document.querySelector('.floating-bar');
 
   function renderGrid() {
     const labels = getCurrentLabels();
@@ -845,9 +854,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentActiveTone !== null) {
       activeToneNameEl.textContent = `${labels[currentActiveTone]}`;
       padPulseEl.classList.add('active');
+      dockEl?.classList.add('has-tone');
     } else {
-      activeToneNameEl.textContent = 'NENHUM';
+      activeToneNameEl.textContent = '';
       padPulseEl.classList.remove('active');
+      dockEl?.classList.remove('has-tone');
     }
   }
 
@@ -1059,17 +1070,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Pisca o ponto do tempo atual (host/solo, onde o motor de áudio roda)
+  function attachBeatVisuals() {
+    if (!audioEngine || audioEngine.onBeatCallback) return;
+    audioEngine.onBeatCallback = (beatNumber, isAccent) => {
+      const dots = document.querySelectorAll('#beat-dots .beat-dot');
+      dots.forEach(d => d.classList.remove('flash', 'flash-accent'));
+      const dot = dots[beatNumber];
+      if (!dot) return;
+      dot.classList.add(isAccent ? 'flash-accent' : 'flash');
+      setTimeout(() => dot.classList.remove('flash', 'flash-accent'), 110);
+    };
+  }
+
   function updateMetroUI(isPlaying) {
     const active = isPlaying !== undefined ? isPlaying : (audioEngine ? audioEngine.metroPlaying : false);
     if (active) {
       btnMetroPlay.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
       btnMetroPlay.classList.add('playing');
-      btnMetroFullPlay.textContent = 'PAUSAR CLICK';
+      btnMetroFullPlay.textContent = 'Parar';
       btnMetroFullPlay.classList.add('playing');
     } else {
       btnMetroPlay.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
       btnMetroPlay.classList.remove('playing');
-      btnMetroFullPlay.textContent = 'INICIAR CLICK';
+      btnMetroFullPlay.textContent = 'Iniciar';
       btnMetroFullPlay.classList.remove('playing');
       document.querySelectorAll('#beat-dots .beat-dot').forEach(d => d.classList.remove('flash', 'flash-accent'));
     }
@@ -1149,8 +1173,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = parseFloat(e.target.value);
     const label = document.getElementById('pan-current-label');
     if (label) {
-      if (val < -0.2) label.textContent = 'Só Fone (L)';
-      else if (val > 0.2) label.textContent = 'Direito (R)';
+      if (val < -0.2) label.textContent = 'Esquerda';
+      else if (val > 0.2) label.textContent = 'Direita';
       else label.textContent = 'Centro';
     }
     if (myRole === 'host' || myRole === 'solo') {
@@ -1174,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateVolumeUI(target, val) {
     const num = Math.round(val);
+    queueMicrotask(paintAllRanges);
     if (target === 'pad' && faderPad) {
       faderPad.value = num;
       if (valPad) valPad.textContent = `${num}%`;
@@ -1207,6 +1232,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setlist
   const songsListEl = document.getElementById('songs-list');
+
+  function activateSong(song) {
+    if (myRole !== 'host' && myRole !== 'solo') {
+      sendWs({ type: 'song_activate', songId: song.id });
+      return;
+    }
+    audioEngine.setPadPreset(song.preset);
+    document.getElementById('pad-preset-select').value = song.preset;
+    setBpm(song.bpm);
+    audioEngine.setMetronomeTimeSig(song.timeSig);
+    document.getElementById('metro-time-sig').value = song.timeSig;
+    updateBeatDots(parseInt(song.timeSig.split('/')[0]) || 4);
+    audioEngine.playTone(song.keyIndex);
+    updateToneUI(song.keyIndex);
+    setlist.activeSongId = song.id;
+    renderSetlist();
+    if (myRole === 'host') broadcastHostState();
+  }
+
   function renderSetlist() {
     const labels = getCurrentLabels();
     songsListEl.innerHTML = '';
@@ -1214,106 +1258,131 @@ document.addEventListener('DOMContentLoaded', () => {
     setlist.songs.forEach(song => {
       const item = document.createElement('div');
       item.className = 'setlist-item';
-      if (setlist.activeSongId === song.id) {
-        item.classList.add('active-song');
-      }
+      if (setlist.activeSongId === song.id) item.classList.add('active-song');
 
-      const infoDiv = document.createElement('div');
-      infoDiv.className = 'song-meta';
+      const infoBtn = document.createElement('button');
+      infoBtn.className = 'song-meta';
+      infoBtn.title = 'Editar';
       const strong = document.createElement('strong');
       strong.textContent = song.title;
       const span = document.createElement('span');
-      span.textContent = `${labels[song.keyIndex]} • ${song.bpm} BPM • ${song.timeSig}`;
-      infoDiv.appendChild(strong);
-      infoDiv.appendChild(span);
+      span.textContent = `${labels[song.keyIndex]} · ${song.bpm} BPM · ${song.timeSig}`;
+      infoBtn.append(strong, span);
+      infoBtn.addEventListener('click', () => openSongEditor(song));
 
       const btnPlay = document.createElement('button');
       btnPlay.className = 'song-play-btn';
-      btnPlay.textContent = '▶ ATIVAR';
-      btnPlay.addEventListener('click', () => {
-        if (myRole !== 'host' && myRole !== 'solo') {
-          sendWs({ type: 'song_activate', songId: song.id });
-          return;
-        }
+      btnPlay.textContent = setlist.activeSongId === song.id ? 'Tocando' : 'Ativar';
+      btnPlay.addEventListener('click', () => activateSong(song));
 
-        audioEngine.setPadPreset(song.preset);
-        document.getElementById('pad-preset-select').value = song.preset;
-        setBpm(song.bpm);
-        audioEngine.setMetronomeTimeSig(song.timeSig);
-        document.getElementById('metro-time-sig').value = song.timeSig;
-        updateBeatDots(parseInt(song.timeSig.split('/')[0]) || 4);
-        audioEngine.playTone(song.keyIndex);
-        updateToneUI(song.keyIndex);
-        setlist.activeSongId = song.id;
-        renderSetlist();
-
-        if (myRole === 'host') broadcastHostState();
-      });
-
-      const btnEdit = document.createElement('button');
-      btnEdit.className = 'song-edit-btn';
-      btnEdit.textContent = '✎';
-      btnEdit.title = 'Editar Música';
-      btnEdit.addEventListener('click', () => {
-        const newTitle = prompt('Novo nome da música:', song.title);
-        if (!newTitle) return;
-        const newBpm = parseInt(prompt('BPM:', song.bpm)) || song.bpm;
-        const newTimeSig = prompt('Compasso (ex: 4/4 ou 6/8):', song.timeSig) || song.timeSig;
-        const updates = { title: newTitle, bpm: newBpm, timeSig: newTimeSig };
-        if (myRole === 'host' || myRole === 'solo') {
-          setlist.updateSong(song.id, updates);
-          renderSetlist();
-          if (myRole === 'host') broadcastHostState();
-        } else {
-          sendWs({ type: 'setlist_edit', songId: song.id, updates });
-        }
-      });
-
-      const btnDelete = document.createElement('button');
-      btnDelete.className = 'song-delete-btn';
-      btnDelete.textContent = '✕';
-      btnDelete.title = 'Excluir Música';
-      btnDelete.addEventListener('click', () => {
-        if (confirm(`Excluir ${song.title}?`)) {
-          if (myRole === 'host' || myRole === 'solo') {
-            setlist.deleteSong(song.id);
-            renderSetlist();
-            if (myRole === 'host') broadcastHostState();
-          } else {
-            sendWs({ type: 'setlist_delete', songId: song.id });
-          }
-        }
-      });
-
-      const btnGroup = document.createElement('div');
-      btnGroup.style.display = 'flex';
-      btnGroup.style.gap = '8px';
-      btnGroup.appendChild(btnPlay);
-      btnGroup.appendChild(btnEdit);
-      btnGroup.appendChild(btnDelete);
-
-      item.appendChild(infoDiv);
-      item.appendChild(btnGroup);
+      item.append(infoBtn, btnPlay);
       songsListEl.appendChild(item);
     });
   }
 
-  document.getElementById('btn-add-song').addEventListener('click', () => {
-    const title = prompt('Nome da música:');
-    if (title) {
-      const bpm = parseInt(tempoNumberEl.textContent) || 120;
-      const timeSig = document.getElementById('metro-time-sig')?.value || '4/4';
-      const preset = document.getElementById('pad-preset-select')?.value || 'shimmer_2';
-      const newSong = { title, keyIndex: 0, bpm, timeSig, preset };
-      if (myRole === 'host' || myRole === 'solo') {
-        setlist.addSong(title, 0, bpm, timeSig, preset);
-        renderSetlist();
-        if (myRole === 'host') broadcastHostState();
-      } else {
-        sendWs({ type: 'setlist_add', song: newSong });
-      }
+  // Editor de música (sheet)
+  const modalSong = document.getElementById('modal-song');
+  const formSong = document.getElementById('form-song');
+  const songTitleInput = document.getElementById('song-title');
+  const songKeySelect = document.getElementById('song-key');
+  const songBpmInput = document.getElementById('song-bpm');
+  const songTimeSigSelect = document.getElementById('song-timesig');
+  const songPresetSelect = document.getElementById('song-preset');
+  const btnSongDelete = document.getElementById('btn-song-delete');
+  let editingSongId = null;
+  let deleteArmed = false;
+
+  function fillKeyOptions(selectedIndex) {
+    const labels = getCurrentLabels();
+    songKeySelect.innerHTML = '';
+    labels.forEach((label, i) => songKeySelect.add(new Option(label, i, false, i === selectedIndex)));
+  }
+
+  function openSongEditor(song) {
+    editingSongId = song ? song.id : null;
+    deleteArmed = false;
+    document.getElementById('song-sheet-title').textContent = song ? 'Editar música' : 'Nova música';
+    songTitleInput.value = song ? song.title : '';
+    fillKeyOptions(song ? song.keyIndex : (currentActiveTone ?? 0));
+    songBpmInput.value = song ? song.bpm : (parseInt(tempoNumberEl.textContent) || 120);
+    songTimeSigSelect.value = song ? song.timeSig : (document.getElementById('metro-time-sig')?.value || '4/4');
+    songPresetSelect.value = song ? song.preset : (document.getElementById('pad-preset-select')?.value || 'shimmer_2');
+    btnSongDelete.classList.toggle('hidden', !song);
+    btnSongDelete.textContent = 'Excluir música';
+    openModal(modalSong);
+    if (!song) setTimeout(() => songTitleInput.focus(), 50);
+  }
+
+  formSong.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = window.normalizeSong({
+      title: songTitleInput.value,
+      keyIndex: songKeySelect.value,
+      bpm: songBpmInput.value,
+      timeSig: songTimeSigSelect.value,
+      preset: songPresetSelect.value
+    });
+    const isLocal = myRole === 'host' || myRole === 'solo';
+    if (editingSongId) {
+      const { id, ...updates } = data;
+      if (isLocal) setlist.updateSong(editingSongId, updates);
+      else sendWs({ type: 'setlist_edit', songId: editingSongId, updates });
+    } else {
+      const { id, ...song } = data;
+      if (isLocal) setlist.addSong(song);
+      else sendWs({ type: 'setlist_add', song });
     }
+    if (isLocal) {
+      renderSetlist();
+      if (myRole === 'host') broadcastHostState();
+    }
+    closeModal(modalSong);
   });
+
+  btnSongDelete.addEventListener('click', () => {
+    if (!editingSongId) return;
+    if (!deleteArmed) {
+      deleteArmed = true;
+      btnSongDelete.textContent = 'Toque de novo para excluir';
+      return;
+    }
+    if (myRole === 'host' || myRole === 'solo') {
+      setlist.deleteSong(editingSongId);
+      renderSetlist();
+      if (myRole === 'host') broadcastHostState();
+    } else {
+      sendWs({ type: 'setlist_delete', songId: editingSongId });
+    }
+    closeModal(modalSong);
+  });
+
+  document.getElementById('btn-add-song').addEventListener('click', () => openSongEditor(null));
+  document.getElementById('btn-close-song').addEventListener('click', () => closeModal(modalSong));
+
+  // Modais: abrir/fechar, toque fora e tecla Esc
+  function openModal(el) { el.classList.remove('hidden'); }
+  function closeModal(el) { el.classList.add('hidden'); }
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(backdrop); });
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(closeModal);
+  });
+
+  // Preenchimento colorido dos sliders (Safari/Chrome não pintam a parte ativa sozinhos)
+  function paintRange(el) {
+    const min = parseFloat(el.min || 0), max = parseFloat(el.max || 100);
+    const pct = ((parseFloat(el.value) - min) / (max - min)) * 100;
+    el.style.setProperty('--pct', `${pct}%`);
+  }
+  function paintAllRanges() {
+    document.querySelectorAll('input[type="range"]').forEach(paintRange);
+  }
+  document.addEventListener('input', (e) => {
+    if (e.target.matches?.('input[type="range"]')) paintRange(e.target);
+  });
+  paintAllRanges();
 
   // Modal Room Info
   const modalRoomInfo = document.getElementById('modal-room-info');
@@ -1383,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (bandNameEl) bandNameEl.textContent = `Banda: ${currentUser.bandName || 'Livre'}`;
     } else {
       if (pill) pill.classList.remove('logged');
-      if (label) label.textContent = 'Entrar / Banda';
+      if (label) label.textContent = 'Entrar';
       if (formAuth) formAuth.classList.remove('hidden');
       if (loggedBox) loggedBox.classList.add('hidden');
     }

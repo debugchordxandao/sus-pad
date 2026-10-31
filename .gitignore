@@ -8,6 +8,7 @@ _audio_backup_wav/
 
 # Variáveis de Ambiente e Segredos
 .env*
+!.env.example
 *.env
 *.pem
 key.pem

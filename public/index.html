@@ -4,255 +4,224 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <meta name="description" content="Pads, bateria, metrônomo e repertório sincronizados para banda ao vivo.">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Live Audio</title>
+  <meta name="apple-mobile-web-app-title" content="PadStudio">
+  <title>PadStudio Live</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Status Banner & Toast Notifications -->
-  <div id="status-banner" class="status-banner hidden"></div>
-  <div id="toast-container" class="toast-container"></div>
+  <div id="status-banner" class="status-banner hidden" role="status"></div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <div id="app">
-    <!-- ========================================================
-         TELA 1: ENTRADA / CRIAR SALA (IGUAL A JOGOS)
-         ======================================================== -->
+    <!-- ================= ENTRADA ================= -->
     <section id="screen-room-gateway" class="screen active">
-      <div class="gateway-container">
-        <!-- Auth Bar Top -->
-        <div class="gateway-top-bar">
-          <button id="btn-auth-open" class="auth-pill" title="Conta da Banda">
-            <span class="auth-icon">👤</span>
-            <span id="auth-pill-text">Entrar / Banda</span>
+      <div class="gateway">
+        <header class="gateway-top-bar">
+          <button id="btn-auth-open" class="text-btn auth-pill" title="Conta da banda">
+            <span id="auth-pill-text">Entrar</span>
           </button>
+        </header>
+
+        <h1 class="large-title">PadStudio</h1>
+
+        <div class="group">
+          <div class="group-header">Criar sala</div>
+          <div class="group-body">
+            <label class="row">
+              <span class="row-label">PIN da sala</span>
+              <input type="password" id="input-host-room-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input styled-pin-input">
+            </label>
+            <label class="row">
+              <span class="row-label">PIN do líder</span>
+              <input type="password" id="input-host-leader-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input styled-pin-input">
+            </label>
+          </div>
+          <div class="group-footer">Este aparelho vira a saída de som na mesa.</div>
+          <button id="btn-gateway-create" class="btn btn-primary btn-lg full-width">Criar sala</button>
         </div>
 
-        <div class="gateway-card">
-          <!-- OPÇÃO 1: CRIAR SALA -->
-          <div class="gateway-section">
-            <button id="btn-gateway-create" class="btn-apple-primary-giant full-width">
-              CRIAR SALA (HOST)
-            </button>
-            <span class="gateway-hint">Cria uma sala de áudio na mesa. Este aparelho será a saída de som.</span>
-            
-            <div class="pin-config-box">
-              <input type="password" id="input-host-room-pin" maxlength="6" placeholder="PIN da Sala (opcional)" class="styled-pin-input">
-              <input type="password" id="input-host-leader-pin" maxlength="6" placeholder="PIN do Líder (opcional)" class="styled-pin-input">
-            </div>
-          </div>
-
-          <div class="divider-line"><span>OU</span></div>
-
-          <!-- OPÇÃO 2: ENTRAR EM UMA SALA -->
-          <div class="gateway-section">
-            <label class="gateway-label">CÓDIGO DA SALA</label>
-            <input type="text" id="input-gateway-code" maxlength="4" placeholder="Ex: K7QF" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input">
-            
-            <div class="gateway-role-row">
-              <select id="select-gateway-role" class="styled-gateway-select">
-                <option value="leader">Controle Total (Tudo Liberado)</option>
-                <option value="keyboardist">Tecladista (Pads)</option>
-                <option value="drummer">Baterista (Drums & FX)</option>
+        <div class="group">
+          <div class="group-header">Entrar em uma sala</div>
+          <input type="text" id="input-gateway-code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input" aria-label="Código da sala">
+          <div class="group-body">
+            <label class="row">
+              <span class="row-label">Função</span>
+              <select id="select-gateway-role" class="row-input row-select styled-gateway-select">
+                <option value="leader">Controle total</option>
+                <option value="keyboardist">Tecladista</option>
+                <option value="drummer">Baterista</option>
               </select>
-              <button id="btn-gateway-join" class="btn-apple-secondary gateway-join-btn">ENTRAR</button>
-            </div>
-
-            <input type="password" id="input-join-pin" maxlength="6" placeholder="PIN de Acesso (se exigido)" class="styled-pin-input hidden" style="margin-top: 10px;">
-            <div id="gateway-error" class="gateway-error-text hidden"></div>
+            </label>
+            <label class="row hidden-row">
+              <input type="password" id="input-join-pin" maxlength="6" inputmode="numeric" placeholder="PIN de acesso" class="row-input row-input--full styled-pin-input hidden">
+            </label>
           </div>
+          <div id="gateway-error" class="gateway-error-text hidden" role="alert"></div>
+          <button id="btn-gateway-join" class="btn btn-secondary btn-lg full-width gateway-join-btn">Entrar</button>
+        </div>
 
-          <!-- OPÇÃO 3: SOLO OFFLINE -->
-          <div class="gateway-footer">
-            <button id="btn-gateway-solo" class="solo-link-btn">Tocar Solo (Sem Sala)</button>
-          </div>
+        <div class="gateway-footer">
+          <button id="btn-gateway-solo" class="text-btn">Tocar sem sala</button>
         </div>
       </div>
     </section>
 
-    <!-- ========================================================
-         TELA 2: A TELA ÚNICA (APÓS ENTRAR NA SALA)
-         ======================================================== -->
+    <!-- ================= PALCO ================= -->
     <section id="screen-main-stage" class="screen">
-      <!-- Top Minimalist Apple Header -->
       <header class="app-header">
         <div class="header-left">
-          <!-- Apple Segmented Navigation Switcher -->
-          <nav class="apple-segmented-nav" id="main-nav-segments">
-            <button class="nav-segment active" data-tab="tab-pads" id="nav-seg-pads">Pads</button>
-            <button class="nav-segment" data-tab="tab-drums" id="nav-seg-drums">Drums</button>
-            <button class="nav-segment" data-tab="tab-metro" id="nav-seg-metro">Metrônomo</button>
-            <button class="nav-segment" data-tab="tab-setlist" id="nav-seg-setlist">Repertório</button>
-            <button class="nav-segment" data-tab="tab-mixer" id="nav-seg-mixer">Mixer</button>
-          </nav>
+          <button id="btn-room-info" class="text-btn room-info-pill" title="Sala e QR Code">
+            <span class="dot-green"></span>
+            <span id="header-room-display"></span>
+          </button>
+          <div id="latency-indicator" class="latency-pill hidden" title="Latência">
+            <span class="latency-dot"></span>
+            <span id="latency-val"></span>
+          </div>
         </div>
 
+        <nav class="segmented apple-segmented-nav" id="main-nav-segments" aria-label="Seções">
+          <button class="nav-segment active" data-tab="tab-pads" id="nav-seg-pads">Pads</button>
+          <button class="nav-segment" data-tab="tab-drums" id="nav-seg-drums">Bateria</button>
+          <button class="nav-segment" data-tab="tab-metro" id="nav-seg-metro">Click</button>
+          <button class="nav-segment" data-tab="tab-setlist" id="nav-seg-setlist">Músicas</button>
+          <button class="nav-segment" data-tab="tab-mixer" id="nav-seg-mixer">Mixer</button>
+        </nav>
+
         <div class="header-right">
-          <!-- Latency Pill -->
-          <div id="latency-indicator" class="pill-btn latency-pill hidden" title="Latência de Rede">
-            <span class="latency-dot"></span>
-            <span id="latency-val">-- ms</span>
-          </div>
-
-          <!-- PÂNICO (Host & Líder) -->
-          <button id="btn-panic" class="pill-btn btn-panic-header hidden" title="PÂNICO: Parar todos os sons imediatamente">PÂNICO</button>
-
-          <!-- Notation Switcher -->
-          <div class="toggle-group" id="group-notation">
-            <button class="pill-btn active" id="btn-notation-cifra">C</button>
-            <button class="pill-btn" id="btn-notation-solfejo">Dó</button>
-          </div>
-          <div class="toggle-group" id="group-accidentals">
-            <button class="pill-btn active" id="btn-accidental-sharp">♯</button>
-            <button class="pill-btn" id="btn-accidental-flat">♭</button>
-          </div>
-          <!-- Room Status Pill (Shows Room Code & Opens QR/Info) -->
-          <button id="btn-room-info" class="pill-btn room-info-pill" title="Informações da Sala">
-            <span class="dot-green"></span>
-            <span id="header-room-display">SALA: ----</span>
-          </button>
+          <button id="btn-panic" class="btn-panic-header hidden" title="Parar todos os sons imediatamente">Pânico</button>
         </div>
       </header>
 
-      <!-- Host Foreground Notice -->
       <div id="host-foreground-banner" class="host-notice hidden">
-        ⚠️ <strong>Mesa de Som (HOST):</strong> Mantenha esta aba em primeiro plano no navegador (os temporizadores de áudio e metrônomo podem ser reduzidos se a aba ficar em segundo plano).
+        Mantenha esta aba aberta em primeiro plano durante o culto.
       </div>
 
-      <!-- STAGE CONTENT -->
       <main class="main-stage">
-        <!-- 1. PADS (MAIN FOCUS) -->
+        <!-- PADS -->
         <section id="tab-pads" class="tab-pane active">
-          <div class="pane-sub-header">
-            <label>Timbre do Pad:</label>
-            <select id="pad-preset-select" class="apple-preset-select">
+          <div class="pane-bar">
+            <select id="pad-preset-select" class="plain-select apple-preset-select" aria-label="Timbre">
               <option value="shimmer_2" selected>Shimmer Modern</option>
-              <option value="warm_pad">Warm Pad (Aveludado)</option>
-              <option value="worship">Worship Original</option>
+              <option value="warm_pad">Warm Pad</option>
+              <option value="worship">Worship</option>
               <option value="pad_shimmer">Shimmer Celestial</option>
-              <option value="abba_pad">Abba Pad (Profundo)</option>
-              <option value="dark_pad">Dark Drone (Denso)</option>
+              <option value="abba_pad">Abba Pad</option>
+              <option value="dark_pad">Dark Drone</option>
               <option value="pad_reverse">Reverse Ambient</option>
               <option value="pad_synth">Synth Pad</option>
             </select>
+            <div class="pane-bar-right">
+              <div class="segmented segmented--sm" id="group-notation">
+                <button class="pill-btn active" id="btn-notation-cifra">C</button>
+                <button class="pill-btn" id="btn-notation-solfejo">Dó</button>
+              </div>
+              <div class="segmented segmented--sm" id="group-accidentals">
+                <button class="pill-btn active" id="btn-accidental-sharp">♯</button>
+                <button class="pill-btn" id="btn-accidental-flat">♭</button>
+              </div>
+            </div>
           </div>
-
-          <div class="tones-grid" id="tones-grid">
-            <!-- 12 Clean Large Pad Buttons -->
-          </div>
+          <div class="tones-grid" id="tones-grid"></div>
         </section>
 
-        <!-- 2. DRUMS & FX -->
+        <!-- BATERIA -->
         <section id="tab-drums" class="tab-pane">
-          <div class="pane-sub-header">
-            <label>Kit de Bateria:</label>
-            <select id="drum-kit-select" class="apple-preset-select">
-              <option value="kit_3" selected>01. Rock Worship (Crash & Chimbais)</option>
-              <option value="kit_1">02. Worship Claps & Sub-Kick</option>
-              <option value="acoustic">03. Acústico Natural</option>
-              <option value="kit_2">04. Cinematic FX & Booms</option>
-              <option value="kit_4">05. Hybrid Ambient FX</option>
+          <div class="pane-bar">
+            <select id="drum-kit-select" class="plain-select apple-preset-select" aria-label="Kit">
+              <option value="kit_3" selected>Rock Worship</option>
+              <option value="kit_1">Worship Claps &amp; Sub-Kick</option>
+              <option value="acoustic">Acústico</option>
+              <option value="kit_2">Cinematic FX</option>
+              <option value="kit_4">Hybrid Ambient</option>
             </select>
           </div>
-
-          <div class="drums-grid" id="drums-grid">
-            <!-- 8 Drum pads generated dynamically -->
-          </div>
+          <div class="drums-grid" id="drums-grid"></div>
         </section>
 
-        <!-- 3. METRONOME -->
+        <!-- CLICK -->
         <section id="tab-metro" class="tab-pane">
           <div class="metro-card">
-            <div class="metro-big-display">
-              <span id="metro-full-bpm">120</span>
-              <span class="bpm-tag">BPM</span>
-            </div>
-
-            <div class="beat-indicators" id="beat-dots">
-              <div class="beat-dot" data-beat="1">1</div>
-              <div class="beat-dot" data-beat="2">2</div>
-              <div class="beat-dot" data-beat="3">3</div>
-              <div class="beat-dot" data-beat="4">4</div>
-            </div>
-
-            <div class="metro-actions-row">
-              <button id="btn-metro-full-play" class="btn-apple-primary">INICIAR CLICK</button>
-              <button id="btn-metro-full-tap" class="btn-apple-secondary">TAP TEMPO</button>
-            </div>
-
-            <div class="metro-adjustments">
-              <div class="adjust-box">
-                <label>Fórmula de Compasso</label>
-                <select id="metro-time-sig" class="apple-select">
-                  <option value="4/4" selected>4/4 (Quaternário)</option>
-                  <option value="3/4">3/4 (Ternário)</option>
-                  <option value="6/8">6/8 (Worship)</option>
-                  <option value="2/4">2/4 (Binário)</option>
-                </select>
+            <div class="metro-display">
+              <div class="metro-big-display">
+                <span id="metro-full-bpm">120</span>
+                <span class="bpm-tag">BPM</span>
               </div>
+              <div class="beat-indicators" id="beat-dots">
+                <div class="beat-dot" data-beat="1">1</div>
+                <div class="beat-dot" data-beat="2">2</div>
+                <div class="beat-dot" data-beat="3">3</div>
+                <div class="beat-dot" data-beat="4">4</div>
+              </div>
+              <div class="metro-actions-row">
+                <button id="btn-metro-full-play" class="btn btn-primary btn-lg">Iniciar</button>
+                <button id="btn-metro-full-tap" class="btn btn-secondary btn-lg">Tap</button>
+              </div>
+            </div>
 
-              <div class="adjust-box">
-                <label>Separação Fone Banda (Pan)</label>
-                <input type="range" id="metro-pan" min="-1" max="1" step="0.2" value="0">
-                <div class="pan-tags">
-                  <span>← Só Fone (L)</span>
-                  <span id="pan-current-label">Centro</span>
-                  <span>Só (R) →</span>
+            <div class="group metro-adjustments">
+              <div class="group-body">
+                <label class="row adjust-box">
+                  <span class="row-label">Compasso</span>
+                  <select id="metro-time-sig" class="row-input row-select apple-select">
+                    <option value="4/4" selected>4/4</option>
+                    <option value="3/4">3/4</option>
+                    <option value="6/8">6/8</option>
+                    <option value="2/4">2/4</option>
+                  </select>
+                </label>
+                <div class="row row--stack adjust-box">
+                  <div class="row-line">
+                    <span class="row-label">Pan do click</span>
+                    <span id="pan-current-label" class="row-value">Centro</span>
+                  </div>
+                  <input type="range" id="metro-pan" min="-1" max="1" step="0.2" value="0" aria-label="Pan do click">
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- 4. REPERTÓRIO -->
+        <!-- MÚSICAS -->
         <section id="tab-setlist" class="tab-pane">
           <div class="setlist-card">
-            <div class="setlist-top-row">
-              <h3>Ordem do Culto / Show</h3>
-              <button id="btn-add-song" class="btn-pill-small">+ Adicionar Música</button>
+            <div class="pane-bar">
+              <h2 class="pane-title">Músicas</h2>
+              <button id="btn-add-song" class="text-btn text-btn--strong">Adicionar</button>
             </div>
             <div class="songs-list" id="songs-list"></div>
           </div>
         </section>
 
-        <!-- 5. MIXER (HOST & LÍDER) -->
+        <!-- MIXER -->
         <section id="tab-mixer" class="tab-pane">
-          <div class="mixer-card">
-            <h3 class="mixer-title">Mixer da Mesa (Sincronizado)</h3>
-            <div class="mixer-grid">
+          <div class="group mixer-card">
+            <div class="group-body mixer-grid">
               <div class="mixer-strip">
-                <span class="strip-name">PADS</span>
-                <div class="strip-slider-wrap">
-                  <input type="range" id="fader-pad" min="0" max="100" value="90">
-                </div>
+                <span class="strip-name">Pads</span>
+                <div class="strip-slider-wrap"><input type="range" id="fader-pad" min="0" max="100" value="90" aria-label="Pads"></div>
                 <span class="strip-val" id="val-pad">90%</span>
               </div>
-
               <div class="mixer-strip">
-                <span class="strip-name">BATERIA</span>
-                <div class="strip-slider-wrap">
-                  <input type="range" id="fader-drums" min="0" max="100" value="85">
-                </div>
+                <span class="strip-name">Bateria</span>
+                <div class="strip-slider-wrap"><input type="range" id="fader-drums" min="0" max="100" value="85" aria-label="Bateria"></div>
                 <span class="strip-val" id="val-drums">85%</span>
               </div>
-
               <div class="mixer-strip">
-                <span class="strip-name">CLICK</span>
-                <div class="strip-slider-wrap">
-                  <input type="range" id="fader-metro" min="0" max="100" value="80">
-                </div>
+                <span class="strip-name">Click</span>
+                <div class="strip-slider-wrap"><input type="range" id="fader-metro" min="0" max="100" value="80" aria-label="Click"></div>
                 <span class="strip-val" id="val-metro">80%</span>
               </div>
-
               <div class="mixer-strip strip-master">
-                <span class="strip-name">MASTER</span>
-                <div class="strip-slider-wrap">
-                  <input type="range" id="fader-master" min="0" max="100" value="90">
-                </div>
+                <span class="strip-name">Master</span>
+                <div class="strip-slider-wrap"><input type="range" id="fader-master" min="0" max="100" value="90" aria-label="Master"></div>
                 <span class="strip-val" id="val-master">90%</span>
               </div>
             </div>
@@ -260,19 +229,16 @@
         </section>
       </main>
 
-      <!-- FLOATING APPLE DOCK -->
+      <!-- MINI PLAYER -->
       <footer class="floating-bar">
         <div class="active-pad-pill">
           <div class="status-indicator" id="pad-pulse"></div>
-          <div class="status-text">
-            <span class="status-tone" id="active-tone-name">NENHUM</span>
-            <span class="status-hint">Tom Ativo</span>
-          </div>
-          <button id="btn-pad-stop" class="quick-stop-btn" title="Parar Som">■ PARAR</button>
+          <span class="status-tone" id="active-tone-name"></span>
+          <button id="btn-pad-stop" class="quick-stop-btn" title="Parar pad">Parar</button>
         </div>
 
         <div class="quick-metro-pill">
-          <button id="btn-metro-play" class="metro-play-btn" title="Iniciar/Pausar Metrônomo">
+          <button id="btn-metro-play" class="metro-play-btn" title="Iniciar/pausar click">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </button>
           <div class="bpm-box">
@@ -280,80 +246,129 @@
             <small>BPM</small>
           </div>
           <div class="bpm-buttons">
-            <button id="bpm-minus-1">-</button>
-            <button id="bpm-plus-1">+</button>
+            <button id="bpm-minus-1" aria-label="Diminuir BPM">−</button>
+            <button id="bpm-plus-1" aria-label="Aumentar BPM">+</button>
           </div>
-          <button id="btn-metro-tap" class="tap-pill-btn">TAP</button>
+          <button id="btn-metro-tap" class="tap-pill-btn">Tap</button>
         </div>
       </footer>
     </section>
   </div>
 
-  <!-- MODAL: INFO DA SALA & QR CODE (ABERTO PELO BOTÃO DA SALA) -->
+  <!-- SHEET: SALA -->
   <div id="modal-room-info" class="modal-backdrop hidden">
-    <div class="modal-card text-center">
+    <div class="modal-card text-center" role="dialog" aria-modal="true" aria-labelledby="room-info-title">
       <div class="modal-header">
-        <h3>Sala Ativa</h3>
-        <button class="close-btn" id="btn-close-room-info">&times;</button>
+        <span></span>
+        <h3 id="room-info-title">Sala</h3>
+        <button class="text-btn text-btn--strong close-btn" id="btn-close-room-info">OK</button>
       </div>
       <div class="modal-body">
-        <div class="code-display">CÓDIGO: <strong id="modal-lbl-code">----</strong></div>
-        <div class="room-link-box">
-          <span class="room-link-label">Link para celular:</span>
-          <a id="modal-lbl-url" href="#" target="_blank" class="room-link-url">Carregando endereço...</a>
+        <strong class="code-display" id="modal-lbl-code"></strong>
+        <div class="qr-container"><img id="room-qr-img" alt="QR Code da sala"></div>
+        <a id="modal-lbl-url" href="#" target="_blank" rel="noopener" class="room-link-url"></a>
+        <div class="group">
+          <div class="group-header" id="room-members-status"></div>
+          <div id="room-members-list" class="group-body room-members-list"></div>
         </div>
-        <p class="modal-desc">Outros aparelhos no mesmo Wi-Fi podem entrar digitando este código ou escaneando:</p>
-        <div class="qr-container">
-          <img id="room-qr-img" alt="QR Code da Sala">
-        </div>
-        <div class="members-status" id="room-members-status">1 aparelho(s) na sala</div>
-        <div id="room-members-list" class="room-members-list"></div>
-        <div style="margin-top: 16px;">
-          <button id="btn-leave-room" class="btn-apple-secondary">Sair da Sala</button>
-        </div>
+        <button id="btn-leave-room" class="btn btn-destructive full-width">Sair da sala</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: LOGIN / CADASTRO DA BANDA -->
-  <div id="modal-auth" class="modal-backdrop hidden">
-    <div class="modal-card">
+  <!-- SHEET: MÚSICA -->
+  <div id="modal-song" class="modal-backdrop hidden">
+    <form id="form-song" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="song-sheet-title" autocomplete="off">
       <div class="modal-header">
-        <div class="auth-tabs">
-          <button id="tab-auth-login" class="auth-tab-btn active">Entrar</button>
-          <button id="tab-auth-register" class="auth-tab-btn">Criar Conta</button>
+        <button type="button" class="text-btn close-btn" id="btn-close-song">Cancelar</button>
+        <h3 id="song-sheet-title">Nova música</h3>
+        <button type="submit" class="text-btn text-btn--strong">Salvar</button>
+      </div>
+      <div class="modal-body">
+        <div class="group">
+          <div class="group-body">
+            <label class="row">
+              <input type="text" id="song-title" maxlength="80" placeholder="Nome" class="row-input row-input--full" required>
+            </label>
+          </div>
         </div>
-        <button class="close-btn" id="btn-close-auth">&times;</button>
+        <div class="group">
+          <div class="group-body">
+            <label class="row">
+              <span class="row-label">Tom</span>
+              <select id="song-key" class="row-input row-select"></select>
+            </label>
+            <label class="row">
+              <span class="row-label">BPM</span>
+              <input type="number" id="song-bpm" min="30" max="320" inputmode="numeric" class="row-input">
+            </label>
+            <label class="row">
+              <span class="row-label">Compasso</span>
+              <select id="song-timesig" class="row-input row-select">
+                <option value="4/4">4/4</option>
+                <option value="3/4">3/4</option>
+                <option value="6/8">6/8</option>
+                <option value="2/4">2/4</option>
+              </select>
+            </label>
+            <label class="row">
+              <span class="row-label">Timbre</span>
+              <select id="song-preset" class="row-input row-select">
+                <option value="shimmer_2">Shimmer Modern</option>
+                <option value="warm_pad">Warm Pad</option>
+                <option value="worship">Worship</option>
+                <option value="pad_shimmer">Shimmer Celestial</option>
+                <option value="abba_pad">Abba Pad</option>
+                <option value="dark_pad">Dark Drone</option>
+                <option value="pad_reverse">Reverse Ambient</option>
+                <option value="pad_synth">Synth Pad</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <button type="button" id="btn-song-delete" class="btn btn-destructive full-width hidden">Excluir música</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- SHEET: CONTA -->
+  <div id="modal-auth" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Conta da banda">
+      <div class="modal-header">
+        <span></span>
+        <div class="segmented segmented--sm auth-tabs">
+          <button id="tab-auth-login" class="auth-tab-btn active">Entrar</button>
+          <button id="tab-auth-register" class="auth-tab-btn">Criar conta</button>
+        </div>
+        <button class="text-btn text-btn--strong close-btn" id="btn-close-auth">OK</button>
       </div>
       <div class="modal-body">
         <form id="form-auth">
-          <div id="field-band-name" class="form-group hidden">
-            <label class="form-label">Nome da Banda / Ministério</label>
-            <input type="text" id="auth-band-name" placeholder="Ex: Banda Rocha Viva" class="apple-input">
+          <div class="group">
+            <div class="group-body">
+              <label id="field-band-name" class="row form-group hidden">
+                <input type="text" id="auth-band-name" placeholder="Nome da banda" class="row-input row-input--full apple-input">
+              </label>
+              <label class="row form-group">
+                <input type="email" id="auth-email" placeholder="E-mail" required autocomplete="email" class="row-input row-input--full apple-input">
+              </label>
+              <label class="row form-group">
+                <input type="password" id="auth-password" placeholder="Senha" required autocomplete="current-password" class="row-input row-input--full apple-input">
+              </label>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">E-mail</label>
-            <input type="email" id="auth-email" placeholder="seu@email.com" required class="apple-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Senha</label>
-            <input type="password" id="auth-password" placeholder="Mínimo 6 caracteres" required class="apple-input">
-          </div>
-          <div id="auth-error" class="auth-error-msg hidden"></div>
-          <button type="submit" id="btn-auth-submit" class="btn-apple-primary-giant full-width" style="margin-top: 14px;">
-            Entrar
-          </button>
+          <div id="auth-error" class="auth-error-msg hidden" role="alert"></div>
+          <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-lg full-width">Entrar</button>
         </form>
         <div id="auth-user-logged" class="auth-logged-box hidden">
-          <p>Conectado como: <strong id="logged-user-name">---</strong></p>
-          <p class="text-muted" id="logged-band-name" style="margin-top: 4px; font-size: 0.85rem;">---</p>
-          <button id="btn-auth-logout" class="btn-apple-secondary" style="margin-top: 16px; width: 100%;">Sair da Conta</button>
+          <p><strong id="logged-user-name"></strong></p>
+          <p class="text-muted" id="logged-band-name"></p>
+          <button id="btn-auth-logout" class="btn btn-destructive full-width">Sair da conta</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="audio-engine.js"></script>
   <script src="setlist.js"></script>
   <script src="app.js"></script>
