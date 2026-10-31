@@ -5,7 +5,7 @@
  * - Áudio: fica a cargo do motor de áudio (cache 'padstudio-audio-*'), que este SW nunca apaga
  */
 
-const SHELL_CACHE = 'padstudio-shell-v6';
+const SHELL_CACHE = 'padstudio-shell-v7';
 const SHELL_PREFIX = 'padstudio-shell-';
 const LEGACY_PREFIX = 'padstudio-live-';
 
@@ -25,10 +25,13 @@ const SHELL = [
   '/js/midi.js',
   '/js/net.js',
   '/js/permissions.js',
+  '/js/setlist-text.js',
+  '/js/shortcuts.js',
   '/js/store.js',
   '/js/ui.js',
   '/js/wake.js',
   '/js/views/auth.js',
+  '/js/views/cues.js',
   '/js/views/drums.js',
   '/js/views/metro.js',
   '/js/views/mixer.js',

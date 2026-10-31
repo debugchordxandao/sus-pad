@@ -104,8 +104,18 @@ setInterval(() => {
   send({ type: 'ping', clientTime: performance.now(), ...(lastLatency ? { measuredLatency: lastLatency } : {}) });
 }, 2000);
 
+// Diferença entre o relógio deste aparelho e o do servidor (mediana das últimas medidas).
+// Serve para o click visual piscar ao mesmo tempo em todos os celulares.
+const offsets = [];
 onMessage('pong', (msg) => {
   if (typeof msg.clientTime !== 'number') return;
-  lastLatency = Math.max(1, Math.round(performance.now() - msg.clientTime));
+  const rtt = performance.now() - msg.clientTime;
+  lastLatency = Math.max(1, Math.round(rtt));
   emit('latency', lastLatency);
+  if (typeof msg.serverTime === 'number' && rtt < 300) {
+    offsets.push(msg.serverTime + rtt / 2 - Date.now());
+    if (offsets.length > 7) offsets.shift();
+    const sorted = [...offsets].sort((a, b) => a - b);
+    store.clockOffset = sorted[Math.floor(sorted.length / 2)];
+  }
 });

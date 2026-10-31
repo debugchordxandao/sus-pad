@@ -18,6 +18,7 @@ const engine = () => store.engine;
 export function buildView() {
   const e = engine();
   const l = lib();
+  const anchor = e.metroAnchorWallClock();
   return {
     activeToneIndex: e.activeToneIndex,
     padPreset: e.targetPreset,
@@ -30,6 +31,10 @@ export function buildView() {
     countIn: e.countIn,
     subdivide: e.subdivide,
     clickSound: e.clickSound,
+    // Em relógio do servidor, para cada celular converter para o próprio relógio
+    metroAnchor: anchor ? { at: anchor.at + (store.clockOffset || 0), beat: anchor.beat } : null,
+    padBrightness: e.padBrightness,
+    padFade: e.padFade,
     volumes: { ...e.volumes },
     activeSongId: l.activeSongId,
     songs: l.songs,
@@ -59,6 +64,7 @@ const executors = {
   pad_on: ({ toneIndex }) => { if (validTone(toneIndex)) engine().playTone(toneIndex); },
   pad_off: () => engine().stopPad(0.4),
   pad_preset: ({ preset }) => { engine().setPadPreset(preset); },
+  pad_opts: ({ brightness, fade }) => engine().setPadOptions({ brightness, fade }),
   drum_hit: ({ padIndex, velocity }) => {
     engine().playDrumPad(padIndex, typeof velocity === 'number' ? velocity : 1);
     emit('drum-hit', padIndex);
@@ -93,7 +99,11 @@ const executors = {
   setlist_edit: ({ songId, updates }) => { lib().updateSong(songId, updates); },
   setlist_delete: ({ songId }) => lib().deleteSong(songId),
   setlist_reorder: ({ order }) => lib().reorder(order),
-  setlist_select: ({ listId }) => { lib().selectList(listId); }
+  setlist_select: ({ listId }) => { lib().selectList(listId); },
+  setlist_import: ({ songs }) => {
+    const added = lib().addSongs(songs);
+    toast(added ? `${added} ${added === 1 ? 'música adicionada' : 'músicas adicionadas'}` : 'Nenhuma música encontrada no texto', added ? 'success' : 'error');
+  }
 };
 
 export const COMMANDS = Object.keys(executors);
@@ -106,6 +116,10 @@ const optimistic = {
   timesig: ({ value }) => ({ timeSig: value }),
   metro_pan: ({ value }) => ({ metroPan: value }),
   metro_opts: (p) => Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)),
+  pad_opts: ({ brightness, fade }) => ({
+    ...(brightness !== undefined ? { padBrightness: brightness } : {}),
+    ...(fade !== undefined ? { padFade: fade } : {})
+  }),
   volume: ({ target, value }) => ({ volumes: { ...store.view.volumes, [target]: value } })
 };
 

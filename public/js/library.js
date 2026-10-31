@@ -175,6 +175,17 @@ export class Library {
     return created;
   }
 
+  /** Adiciona várias músicas de uma vez (importação). Devolve quantas entraram. */
+  addSongs(songs) {
+    if (!Array.isArray(songs)) return 0;
+    const room = MAX_SONGS - this.songs.length;
+    const created = songs.slice(0, Math.max(0, room)).map(s => normalizeSong({ ...s, id: undefined }));
+    if (!created.length) return 0;
+    this.songs.push(...created);
+    this.save();
+    return created.length;
+  }
+
   updateSong(id, updates) {
     const idx = this.songs.findIndex(s => s.id === id);
     if (idx === -1) return null;

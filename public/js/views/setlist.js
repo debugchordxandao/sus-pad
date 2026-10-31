@@ -3,9 +3,12 @@ import { dispatch, commit } from '../actions.js';
 import { $, el, labels, fillSelect, openModal, closeModal, confirmButton, toast } from '../ui.js';
 import { PAD_PRESETS, TIME_SIGNATURES } from '../catalog.js';
 import { normalizeSong } from '../library.js';
+import { parseSetlistText, formatSetlistText } from '../setlist-text.js';
 
 const NEW_LIST = '__new';
 const EDIT_LIST = '__edit';
+const IMPORT_LIST = '__import';
+const SHARE_LIST = '__share';
 
 let editing = false;
 let dragging = false;
@@ -110,12 +113,11 @@ function renderListSelect() {
   selectSignature = signature;
   const options = store.view.lists.map(l => new Option(l.name, l.id));
   const children = [...options];
-  if (isLocal()) {
-    const group = document.createElement('optgroup');
-    group.label = '──────';
-    group.append(new Option('Novo repertório…', NEW_LIST), new Option('Renomear ou excluir…', EDIT_LIST));
-    children.push(group);
-  }
+  const group = document.createElement('optgroup');
+  group.label = '──────';
+  if (isLocal()) group.append(new Option('Novo repertório…', NEW_LIST), new Option('Renomear ou excluir…', EDIT_LIST));
+  group.append(new Option('Colar lista…', IMPORT_LIST), new Option('Compartilhar…', SHARE_LIST));
+  children.push(group);
   select.replaceChildren(...children);
   select.value = store.view.activeListId;
 }
@@ -135,9 +137,11 @@ function openListSheet(mode) {
 function initLists() {
   $('setlist-select').addEventListener('change', (e) => {
     const value = e.target.value;
-    if (value === NEW_LIST || value === EDIT_LIST) {
+    if ([NEW_LIST, EDIT_LIST, IMPORT_LIST, SHARE_LIST].includes(value)) {
       e.target.value = store.view.activeListId;
-      openListSheet(value === NEW_LIST ? 'new' : 'edit');
+      if (value === IMPORT_LIST) openImportSheet();
+      else if (value === SHARE_LIST) shareList();
+      else openListSheet(value === NEW_LIST ? 'new' : 'edit');
       return;
     }
     dispatch('setlist_select', { listId: value });
@@ -156,6 +160,69 @@ function initLists() {
     store.library.deleteList(store.library.list.id);
     commit();
     closeModal($('modal-list'));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Colar lista (WhatsApp) e compartilhar
+// ---------------------------------------------------------------------------
+
+function currentListName() {
+  return store.view.lists.find(l => l.id === store.view.activeListId)?.name || 'Repertório';
+}
+
+function previewImport() {
+  const { name, songs } = parseSetlistText($('import-text').value);
+  $('import-preview').textContent = songs.length
+    ? `${songs.length} ${songs.length === 1 ? 'música' : 'músicas'}: ${songs.slice(0, 3).map(s => `${s.title} (${labels()[s.keyIndex]})`).join(', ')}${songs.length > 3 ? '…' : ''}`
+    : '';
+  $('import-new-row').classList.toggle('hidden', !isLocal());
+  if (name && !$('import-new').dataset.touched) $('import-new').checked = true;
+  $('btn-import-submit').disabled = songs.length === 0;
+  return { name, songs };
+}
+
+function openImportSheet() {
+  $('import-text').value = '';
+  $('import-new').checked = false;
+  delete $('import-new').dataset.touched;
+  previewImport();
+  openModal($('modal-import'));
+  setTimeout(() => $('import-text').focus(), 60);
+}
+
+async function shareList() {
+  const text = formatSetlistText(currentListName(), store.view.songs, labels());
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: currentListName(), text });
+      return;
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Repertório copiado. É só colar no grupo da banda.', 'success');
+  } catch (e) {
+    toast('Não foi possível copiar neste navegador.', 'error');
+  }
+}
+
+function initImport() {
+  $('import-text').addEventListener('input', previewImport);
+  $('import-new').addEventListener('change', () => { $('import-new').dataset.touched = '1'; });
+  $('btn-close-import').addEventListener('click', () => closeModal($('modal-import')));
+  $('form-import').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const { name, songs } = previewImport();
+    if (!songs.length) return;
+    if (isLocal() && $('import-new').checked) {
+      store.library.addList(name || 'Repertório importado');
+      commit();
+    }
+    dispatch('setlist_import', { songs: songs.map(s => { const { id, ...rest } = normalizeSong(s); return rest; }) });
+    closeModal($('modal-import'));
   });
 }
 
@@ -230,6 +297,7 @@ function renderStrip() {
 export function initSetlist() {
   initLists();
   initEditor();
+  initImport();
   $('btn-transpose-down').addEventListener('click', () => dispatch('transpose', { delta: -1 }));
   $('btn-transpose-up').addEventListener('click', () => dispatch('transpose', { delta: 1 }));
   $('btn-song-next').addEventListener('click', activateNext);

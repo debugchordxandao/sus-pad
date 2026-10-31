@@ -59,6 +59,10 @@
           <input type="text" id="input-gateway-code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input" aria-label="Código da sala">
           <div class="group-body">
             <label class="row">
+              <span class="row-label">Seu nome</span>
+              <input type="text" id="input-member-name" maxlength="30" placeholder="Opcional" autocomplete="given-name" class="row-input">
+            </label>
+            <label class="row">
               <span class="row-label">Função</span>
               <select id="select-gateway-role" class="row-input row-select">
                 <option value="leader">Líder</option>
@@ -100,6 +104,7 @@
           <button class="nav-segment" data-tab="tab-metro" id="nav-seg-metro">Click</button>
           <button class="nav-segment" data-tab="tab-setlist" id="nav-seg-setlist">Músicas</button>
           <button class="nav-segment" data-tab="tab-mixer" id="nav-seg-mixer">Mixer</button>
+          <button class="nav-segment" data-tab="tab-cues" id="nav-seg-cues">Sinais</button>
         </nav>
 
         <div class="header-right">
@@ -247,6 +252,34 @@
               </div>
             </div>
           </div>
+          <div class="group mixer-card">
+            <div class="group-header">Som do pad</div>
+            <div class="group-body mixer-grid">
+              <div class="mixer-strip">
+                <span class="strip-name">Brilho</span>
+                <div class="strip-slider-wrap"><input type="range" id="pad-brightness" min="0" max="100" value="90" aria-label="Brilho do pad"></div>
+                <span class="strip-val" id="val-brightness">90%</span>
+              </div>
+              <div class="mixer-strip">
+                <span class="strip-name">Transição</span>
+                <div class="strip-slider-wrap"><input type="range" id="pad-fade" min="0.2" max="6" step="0.1" value="1" aria-label="Tempo de transição entre tons"></div>
+                <span class="strip-val" id="val-fade">1,0 s</span>
+              </div>
+            </div>
+            <div class="group-footer">Brilho abaixo de 50% deixa o pad mais escuro e discreto. Transição é o tempo da troca entre tons e do fade ao parar.</div>
+          </div>
+        </section>
+
+        <!-- SINAIS -->
+        <section id="tab-cues" class="tab-pane">
+          <div class="cues-card">
+            <div class="cues-grid" id="cues-grid"></div>
+            <form id="form-cue" class="cue-form" autocomplete="off">
+              <input type="text" id="cue-custom" maxlength="60" placeholder="Outro aviso" class="cue-input" aria-label="Aviso personalizado">
+              <button type="submit" class="btn btn-primary">Enviar</button>
+            </form>
+            <div class="group-footer">O aviso aparece grande em todos os aparelhos da sala por 4 segundos.</div>
+          </div>
         </section>
       </main>
 
@@ -271,6 +304,42 @@
         </div>
       </footer>
     </section>
+  </div>
+
+  <!-- AVISO GRANDE (sinais) -->
+  <div id="cue-overlay" class="cue-overlay hidden" role="alert">
+    <div class="cue-text" id="cue-text"></div>
+    <div class="cue-from" id="cue-from"></div>
+  </div>
+
+  <!-- SHEET: COLAR LISTA -->
+  <div id="modal-import" class="modal-backdrop hidden">
+    <form id="form-import" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="import-title" autocomplete="off">
+      <div class="modal-header">
+        <button type="button" class="text-btn" id="btn-close-import">Cancelar</button>
+        <h3 id="import-title">Colar lista</h3>
+        <button type="submit" class="text-btn text-btn--strong" id="btn-import-submit">Importar</button>
+      </div>
+      <div class="modal-body">
+        <div class="group">
+          <div class="group-body">
+            <label class="row row--stack">
+              <textarea id="import-text" rows="8" placeholder="1. Grande É o Senhor (D)&#10;2. Bondade de Deus - G - 72 bpm&#10;3. Santo Espírito [Tom: E]" class="row-textarea"></textarea>
+            </label>
+          </div>
+          <div class="group-footer" id="import-preview"></div>
+        </div>
+        <div class="group" id="import-new-row">
+          <div class="group-body">
+            <label class="row">
+              <span class="row-label">Criar repertório novo</span>
+              <input type="checkbox" id="import-new" class="switch">
+            </label>
+          </div>
+          <div class="group-footer">Cole a mensagem do grupo da banda. O tom entre parênteses ou depois de um traço é reconhecido.</div>
+        </div>
+      </div>
+    </form>
   </div>
 
   <!-- SHEET: SALA -->
@@ -407,6 +476,9 @@
         <div class="group">
           <div class="group-header">Teclado do computador</div>
           <div class="group-body">
+            <div class="row"><span class="row-label">Pads (C a B)</span><span class="row-value">1 2 3 … 9 0 - =</span></div>
+            <div class="row"><span class="row-label">Parar o pad</span><span class="row-value">Espaço</span></div>
+            <div class="row"><span class="row-label">Próxima música</span><span class="row-value">→</span></div>
             <div class="row"><span class="row-label">Bateria</span><span class="row-value">Q W E R · A S D F</span></div>
           </div>
         </div>

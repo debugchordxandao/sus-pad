@@ -10,12 +10,14 @@ Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet l
 
 | Recurso | O que faz |
 | --- | --- |
-| Pads | 12 tons × 8 timbres em loop contínuo. Ao trocar de timbre, o som atual continua até o novo carregar e então faz crossfade. |
+| Pads | 12 tons × 8 timbres em loop contínuo. Ao trocar de timbre, o som atual continua até o novo carregar e então faz crossfade. No Mixer: **Brilho** (filtro) e **Transição** (tempo da troca entre tons). |
 | Bateria | 5 kits com 8 sons cada. No computador, use as teclas Q W E R · A S D F. |
-| Click | BPM, tap, compasso, 4 sons, colcheias, modo **Só contagem** (um compasso e para) e pan para mandar o click só ao fone da banda. |
-| Músicas | Vários repertórios, arrastar para reordenar, anotações por música, **Próxima** e ±½ tom ao vivo. |
+| Click | BPM, tap, compasso, 4 sons, colcheias, modo **Só contagem** (um compasso e para) e pan para mandar o click só ao fone da banda. No 6/8 o tempo 4 também é acentuado. Os celulares mostram o tempo piscando junto com o host. |
+| Músicas | Vários repertórios, arrastar para reordenar, anotações por música, **Próxima** e ±½ tom ao vivo. **Colar lista** lê a mensagem do WhatsApp (com o tom de cada música) e **Compartilhar** gera o texto para o grupo. |
+| Sinais | Avisos grandes em todos os aparelhos: Repete, Última vez, Segura, Volta ao início, Fim… ou um texto livre. |
 | Mixer | Volume de pads, bateria, click e master, sincronizado com a sala. |
-| Permissões | O host escolhe o que tecladista, baterista e líder podem controlar (tela da sala). |
+| Permissões | O host escolhe o que tecladista, baterista e líder podem controlar (tela da sala). Cada músico pode informar o nome ao entrar. |
+| Teclado do computador | 1–0, − e = tocam os 12 tons; Espaço para o pad; → próxima música; Q W E R · A S D F bateria. |
 | MIDI | Em **Ajustes**: qualquer nota toca o pad do mesmo tom e o pedal de sustain avança para a próxima música. Funciona no Chrome e no Edge. |
 | Sem internet | Em **Ajustes**, **Baixar todos os sons** (~85 MB) deixa o app tocando com a internet instável. Requer HTTPS. |
 | Conta da banda | Os repertórios ficam salvos na conta e aparecem em qualquer aparelho. |
@@ -46,10 +48,12 @@ Sem HTTPS o app funciona normalmente. Para a tela não apagar, ele usa um vídeo
 ## Qualidade
 
 ```bash
-npm test           # 24 testes: servidor real + WebSocket, segurança, biblioteca, permissões, catálogo de áudio
+npm test           # 31 testes: servidor real + WebSocket, segurança, repertórios, leitura de listas, permissões, catálogo de áudio
 npm run lint       # ESLint
 npm run check      # os dois
 ```
+
+No GitHub, `.github/workflows/ci.yml` roda lint e testes a cada push.
 
 ## Deploy (Railway ou Render)
 
@@ -79,6 +83,8 @@ public/
   js/permissions.js                    o que cada função pode fazer
   js/store.js, js/actions.js           estado e ações (tudo passa por dispatch)
   js/net.js, js/midi.js, js/wake.js    sala, MIDI e tela acesa
+  js/setlist-text.js                   colar/compartilhar repertório em texto
+  js/shortcuts.js                      atalhos do teclado
   js/views/*.js                        telas
 server/
   server.js        HTTP + WebSocket

@@ -173,6 +173,7 @@ function notifyRoomMembers(code) {
 function isActionAllowed(role, msg, permissions) {
   if (msg.type === 'host_state_update' || msg.type === 'set_permissions') return role === 'host';
   if (msg.type === 'ping') return true;
+  if (msg.type === 'cue' && role === 'host') return true;
   return isCommandAllowed(role, msg.type, permissions);
 }
 

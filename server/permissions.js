@@ -4,12 +4,13 @@
  */
 
 const ROLES = ['keyboardist', 'drummer', 'leader'];
-const CAPABILITIES = ['pads', 'drums', 'metro', 'setlist', 'mixer', 'panic'];
+const CAPABILITIES = ['pads', 'drums', 'metro', 'setlist', 'mixer', 'cues', 'panic'];
 
 const COMMAND_CAPABILITY = {
   pad_on: 'pads',
   pad_off: 'pads',
   pad_preset: 'pads',
+  pad_opts: 'pads',
   drum_hit: 'drums',
   drum_kit: 'drums',
   metro: 'metro',
@@ -26,7 +27,9 @@ const COMMAND_CAPABILITY = {
   setlist_edit: 'setlist',
   setlist_delete: 'setlist',
   setlist_reorder: 'setlist',
-  setlist_select: 'setlist'
+  setlist_select: 'setlist',
+  setlist_import: 'setlist',
+  cue: 'cues'
 };
 
 function defaultPermissions() {

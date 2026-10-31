@@ -1029,6 +1029,7 @@ body.no-drums #nav-seg-drums,
 body.no-metro #nav-seg-metro, body.no-metro .quick-metro-pill,
 body.no-setlist #nav-seg-setlist, body.no-setlist .song-strip-actions,
 body.no-mixer #nav-seg-mixer,
+body.no-cues #nav-seg-cues, body[data-role="solo"] #nav-seg-cues,
 body.no-panic #btn-panic { display: none !important; }
 
 @media (max-width: 420px) {
@@ -1039,3 +1040,76 @@ body.no-panic #btn-panic { display: none !important; }
 
 .row > .row-value { margin-left: auto; text-align: right; }
 .plain-select { field-sizing: content; }
+
+/* Pulso do tempo no mini player */
+.bpm-box #tempo-number { transition: color 0.12s ease-out; }
+.bpm-box.tick #tempo-number { color: var(--label); animation: tick 0.14s ease-out; }
+.bpm-box.tick-accent #tempo-number { color: var(--tint); animation: tick 0.18s ease-out; }
+@keyframes tick { from { transform: scale(1.12); } to { transform: none; } }
+
+/* Mixer em dois grupos */
+.tab-pane#tab-mixer.active { gap: 28px; }
+
+/* Sinais */
+.cues-card { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 760px; margin: 0 auto; }
+.cues-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.cue-button {
+  min-height: 72px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--bg-2);
+  color: var(--label);
+  font-size: 19px;
+  font-weight: 600;
+  transition: transform 0.08s, background 0.15s;
+}
+.cue-button:active { transform: scale(0.97); background: var(--tint); }
+.cue-form { display: flex; gap: 8px; }
+.cue-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--bg-2);
+  color: var(--label);
+  font-size: 17px;
+}
+.cue-input::placeholder { color: var(--label-3); }
+@media (min-width: 640px) {
+  .cues-grid { grid-template-columns: repeat(3, 1fr); }
+  .cue-button { min-height: 96px; font-size: 22px; }
+}
+@media (min-width: 1024px) { .cues-grid { grid-template-columns: repeat(5, 1fr); } }
+
+.cue-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgba(10, 132, 255, 0.94);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+}
+.cue-overlay.pop { animation: cuePop 0.35s var(--ease); }
+@keyframes cuePop { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+.cue-text { font-size: clamp(44px, 13vw, 120px); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.cue-from { font-size: 17px; opacity: 0.85; }
+.cue-from:empty { display: none; }
+
+#import-preview:empty { display: none; }
+
+@media (max-width: 420px) {
+  .apple-segmented-nav > button { font-size: 12px; padding: 0 2px; }
+}
+
+@media (min-width: 900px) {
+  .floating-bar:not(.has-tone) { justify-content: center; }
+}

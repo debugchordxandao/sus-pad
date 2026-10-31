@@ -1,4 +1,4 @@
-import { store, emit, on, isLocal, isRemote, allowed } from '../store.js';
+import { store, emit, on, isLocal, isRemote, allowed, savePrefs } from '../store.js';
 import { connect, disconnect, send, onMessage, setRejoin } from '../net.js';
 import { commit, dispatch, runCommand, applyRemoteState, broadcastNow, COMMANDS } from '../actions.js';
 import { $, el, toast, showBanner, hideBanner, openModal, closeModal } from '../ui.js';
@@ -65,7 +65,7 @@ export function switchTab(tabId) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
 }
 
-const TAB_CAPABILITY = { 'tab-pads': 'pads', 'tab-drums': 'drums', 'tab-metro': 'metro', 'tab-setlist': 'setlist', 'tab-mixer': 'mixer' };
+const TAB_CAPABILITY = { 'tab-pads': 'pads', 'tab-drums': 'drums', 'tab-metro': 'metro', 'tab-setlist': 'setlist', 'tab-mixer': 'mixer', 'tab-cues': 'cues' };
 
 function applyRoleUI() {
   const body = document.body;
@@ -157,7 +157,9 @@ function joinRoom() {
   $('gateway-error').classList.add('hidden');
   store.role = $('select-gateway-role').value;
   joinPin = $('input-join-pin').value.trim() || null;
-  connect(() => send({ type: 'join_room', roomCode: code, role: store.role, pin: joinPin || undefined }));
+  const name = $('input-member-name').value.trim().slice(0, 30);
+  if (name !== store.prefs.name) savePrefs({ name });
+  connect(() => send({ type: 'join_room', roomCode: code, role: store.role, pin: joinPin || undefined, name: name || undefined }));
 }
 
 async function playSolo() {
@@ -175,7 +177,7 @@ setRejoin(() => {
     const session = loadHostSession();
     if (session) send({ type: 'reconnect_host', roomCode: session.roomCode, hostToken: session.hostToken });
   } else if (isRemote()) {
-    send({ type: 'join_room', roomCode: store.roomCode, role: store.role, pin: joinPin || undefined });
+    send({ type: 'join_room', roomCode: store.roomCode, role: store.role, pin: joinPin || undefined, name: store.prefs.name || undefined });
   }
 });
 
@@ -209,7 +211,7 @@ function renderMembers(members) {
   $('room-members-list').replaceChildren(...members.map(m => {
     const lat = m.latency || 0;
     return el('div', { class: 'member-item' }, [
-      el('span', { class: 'member-name-text', text: m.name || m.id }),
+      el('span', { class: 'member-name-text', text: m.name || ROLE_NAMES[m.role] || 'Membro' }),
       el('span', { class: 'member-role-badge', text: ROLE_NAMES[m.role] || 'Membro' }),
       el('span', {
         class: `member-latency-tag ${lat < 30 ? 'lat-green' : lat < 80 ? 'lat-yellow' : 'lat-red'}`,
@@ -378,6 +380,7 @@ export function initRoom() {
   if (fromUrl) $('input-gateway-code').value = fromUrl.toUpperCase().slice(0, 4);
   else if (saved && savedRole !== 'host') $('input-gateway-code').value = saved;
   if (savedRole && ['keyboardist', 'drummer', 'leader'].includes(savedRole)) $('select-gateway-role').value = savedRole;
+  $('input-member-name').value = store.prefs.name || '';
 
   renderHostResume();
 }

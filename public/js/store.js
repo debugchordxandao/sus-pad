@@ -13,7 +13,7 @@ import { DEFAULT_PRESET, DEFAULT_KIT, DEFAULT_CLICK } from './catalog.js';
 const PREFS_KEY = 'padstudio_prefs';
 
 function loadPrefs() {
-  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false };
+  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '' };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') };
   } catch (e) {
@@ -34,6 +34,9 @@ export function defaultView() {
     countIn: false,
     subdivide: false,
     clickSound: DEFAULT_CLICK,
+    metroAnchor: null,
+    padBrightness: 90,
+    padFade: 1,
     volumes: { pad: 90, drums: 85, metro: 80, master: 90 },
     activeSongId: null,
     songs: [],
@@ -51,7 +54,9 @@ export const store = {
   view: defaultView(),
   permissions: defaultPermissions(),
   prefs: loadPrefs(),
-  user: null
+  user: null,
+  /** relógio do servidor − relógio deste aparelho (ms) */
+  clockOffset: 0
 };
 
 export const REMOTE_ROLES = ['keyboardist', 'drummer', 'leader'];

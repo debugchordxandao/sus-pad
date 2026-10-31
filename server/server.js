@@ -31,7 +31,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Limites de tamanho: o host envia o estado completo (inclui o repertório), controles enviam comandos curtos
-const MAX_CLIENT_MSG_BYTES = 4 * 1024;
+const MAX_CLIENT_MSG_BYTES = 32 * 1024; // comporta colar um repertório inteiro
 const MAX_HOST_MSG_BYTES = 128 * 1024;
 const keyPath = process.env.SSL_KEY || path.join(__dirname, '../key.pem');
 const certPath = process.env.SSL_CERT || path.join(__dirname, '../cert.pem');
@@ -185,6 +185,9 @@ function isValidMessageFormat(msg) {
     ...['songId', 'listId', 'kitId', 'preset', 'action', 'target', 'clickSound', 'role', 'roomCode']
       .map(key => optional(msg[key], v => isShortString(v))),
     optional(msg.order, v => Array.isArray(v) && v.length <= 300 && v.every(id => isShortString(id))),
+    optional(msg.songs, v => Array.isArray(v) && v.length <= 300 && v.every(s => s && typeof s === 'object')),
+    optional(msg.text, v => isShortString(v, 60)),
+    optional(msg.name, v => isShortString(v, 60)),
     ...['song', 'updates', 'permissions', 'state'].map(key => optional(msg[key], v => v && typeof v === 'object' && !Array.isArray(v)))
   ];
   return checks.every(Boolean);
@@ -274,7 +277,7 @@ function handleClientMessage(ws, msg) {
 
   // 1. Latency Ping/Pong
   if (type === 'ping') {
-    ws.send(JSON.stringify({ type: 'pong', clientTime: msg.clientTime }));
+    ws.send(JSON.stringify({ type: 'pong', clientTime: msg.clientTime, serverTime: Date.now() }));
     if (typeof msg.measuredLatency === 'number' && Number.isFinite(msg.measuredLatency)) {
       const latency = Math.max(0, Math.min(10000, Math.round(msg.measuredLatency)));
       // Só reenvia a lista de membros quando a latência muda de verdade
@@ -430,6 +433,14 @@ function handleClientMessage(ws, msg) {
       action: type,
       message: 'Seu papel atual não tem permissão para este comando.'
     }));
+    return;
+  }
+
+  // 5b. Sinais para a banda: vão para todos os aparelhos da sala (inclusive quem enviou)
+  if (type === 'cue') {
+    const text = String(msg.text || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60);
+    if (!text) return;
+    broadcastToRoom(room, { type: 'cue', text, from: ws.clientName, fromRole: ws.role });
     return;
   }
 

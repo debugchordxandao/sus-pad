@@ -141,21 +141,6 @@ test('mensagens malformadas não derrubam o servidor', async () => {
   c.close();
 });
 
-test('rota HTTP de PIN tem limite de tentativas', async () => {
-  const { host, created } = await createRoom({ roomPin: '9999' });
-  const statuses = [];
-  for (let i = 0; i < 7; i++) {
-    const r = await fetch(`${srv.base}/api/rooms/validate-pin`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomCode: created.roomCode, role: 'drummer', pin: String(i) })
-    });
-    statuses.push(r.status);
-  }
-  assert.deepEqual(statuses.slice(0, 5), [403, 403, 403, 403, 403]);
-  assert.equal(statuses[6], 429);
-  host.close();
-});
-
 test('QR Code: preto no branco e com limite de tamanho', async () => {
   const ok = await (await fetch(`${srv.base}/api/qr?text=${encodeURIComponent('http://192.168.0.2:3000/?room=AB12')}`)).json();
   assert.match(ok.qr, /^data:image\/png;base64,/);
@@ -199,6 +184,76 @@ test('ferramenta de calibração não existe em produção', async () => {
     assert.equal((await fetch(`${prod.base}/loop-test.html`)).status, 404);
   } finally {
     await prod.stop();
+  }
+});
+
+test('sinais chegam a todos os aparelhos da sala e respeitam a permissão', async () => {
+  const { host, created } = await createRoom();
+  const leader = await client(srv.wsUrl);
+  leader.send({ type: 'join_room', roomCode: created.roomCode, role: 'leader', name: 'Ana' });
+  await leader.next('room_joined');
+  const drummer = await join(created.roomCode, 'drummer');
+  await drummer.next('room_joined');
+
+  leader.send({ type: 'cue', text: 'Última vez' });
+  for (const c of [host, leader, drummer]) {
+    const cue = await c.next('cue');
+    assert.equal(cue.text, 'Última vez');
+    assert.equal(cue.from, 'Ana');
+  }
+
+  host.send({ type: 'set_permissions', permissions: { drummer: { cues: false } } });
+  await drummer.next('permissions');
+  drummer.send({ type: 'cue', text: 'Fim' });
+  assert.equal((await drummer.next('permission_denied')).action, 'cue');
+  host.close(); leader.close(); drummer.close();
+});
+
+test('pong traz a hora do servidor (click visual sincronizado)', async () => {
+  const c = await client(srv.wsUrl);
+  const before = Date.now();
+  c.send({ type: 'ping', clientTime: 123 });
+  const pong = await c.next('pong');
+  assert.equal(pong.clientTime, 123);
+  assert.ok(pong.serverTime >= before - 1000 && pong.serverTime <= Date.now() + 1000);
+  c.close();
+});
+
+test('controle remoto consegue colar um repertório grande (> 4 KB)', async () => {
+  const { host, created } = await createRoom();
+  const remote = await join(created.roomCode);
+  await remote.next('room_joined');
+  const songs = Array.from({ length: 80 }, (_, i) => ({ title: `Música colada número ${i}`, keyIndex: i % 12, bpm: 90, timeSig: '4/4', preset: 'worship', notes: '' }));
+  remote.send({ type: 'setlist_import', songs });
+  const cmd = await host.next('setlist_import');
+  assert.equal(cmd.songs.length, 80);
+  host.close(); remote.close();
+});
+
+test('rota HTTP de PIN tem limite de tentativas', async () => {
+  // Servidor próprio: o bloqueio dura 10 min e atrapalharia os outros testes
+  const own = await startServer();
+  try {
+    const host = await client(own.wsUrl);
+    host.send({ type: 'create_room', roomPin: '9999' });
+    const created = await host.next('room_created');
+    const statuses = [];
+    for (let i = 0; i < 7; i++) {
+      const r = await fetch(`${own.base}/api/rooms/validate-pin`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomCode: created.roomCode, role: 'drummer', pin: String(i) })
+      });
+      statuses.push(r.status);
+    }
+    assert.deepEqual(statuses.slice(0, 5), [403, 403, 403, 403, 403]);
+    assert.equal(statuses[6], 429);
+    // O mesmo IP também fica bloqueado para entrar pela sala via WebSocket
+    const c = await client(own.wsUrl);
+    c.send({ type: 'join_room', roomCode: created.roomCode, role: 'drummer', pin: '9999' });
+    assert.match((await c.next('error')).message, /Muitas tentativas/);
+    host.close(); c.close();
+  } finally {
+    await own.stop();
   }
 });
 

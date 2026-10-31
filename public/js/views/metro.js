@@ -1,4 +1,4 @@
-import { store, on } from '../store.js';
+import { store, on, emit, isRemote } from '../store.js';
 import { dispatch } from '../actions.js';
 import { $, el, fillSelect, setRangeValue } from '../ui.js';
 import { CLICK_SOUNDS, TIME_SIGNATURES } from '../catalog.js';
@@ -79,12 +79,54 @@ function render() {
 }
 
 function flashBeat({ beat, accent }) {
+  // Pulso no BPM do mini player: o tempo fica visível em qualquer aba
+  const box = document.querySelector('.bpm-box');
+  box.classList.remove('tick', 'tick-accent');
+  void box.offsetWidth;
+  box.classList.add(accent ? 'tick-accent' : 'tick');
+
   const dots = $('beat-dots').querySelectorAll('.beat-dot');
   dots.forEach(d => d.classList.remove('flash', 'flash-accent'));
   const dot = dots[beat];
   if (!dot) return;
   dot.classList.add(accent ? 'flash-accent' : 'flash');
   setTimeout(() => dot.classList.remove('flash', 'flash-accent'), 110);
+}
+
+// ---------------------------------------------------------------------------
+// Click visual nos celulares: o host envia o momento de um tempo de referência
+// (no relógio do servidor) e cada aparelho calcula o tempo atual com o próprio relógio.
+// ---------------------------------------------------------------------------
+
+let beatLoop = null;
+let lastBeatKey = null;
+
+function remoteBeatLoop() {
+  const v = store.view;
+  if (!isRemote() || !v.metroPlaying || !v.metroAnchor) {
+    beatLoop = null;
+    lastBeatKey = null;
+    return;
+  }
+  const anchorLocal = v.metroAnchor.at - (store.clockOffset || 0);
+  const elapsed = Date.now() - anchorLocal;
+  if (elapsed >= 0) {
+    const n = Math.floor(elapsed / (60000 / v.bpm));
+    const key = `${v.metroAnchor.at}:${n}`;
+    if (key !== lastBeatKey) {
+      lastBeatKey = key;
+      const beats = parseInt(v.timeSig, 10) || 4;
+      const beat = (v.metroAnchor.beat + n) % beats;
+      emit('beat', { beat, accent: beat === 0 });
+    }
+  }
+  beatLoop = requestAnimationFrame(remoteBeatLoop);
+}
+
+function syncRemoteBeats() {
+  if (!beatLoop && isRemote() && store.view.metroPlaying && store.view.metroAnchor) {
+    beatLoop = requestAnimationFrame(remoteBeatLoop);
+  }
 }
 
 export function initMetro() {
@@ -107,6 +149,7 @@ export function initMetro() {
   $('metro-pan').addEventListener('input', (e) => dispatch('metro_pan', { value: parseFloat(e.target.value) }));
 
   on('view', render);
+  on('view', syncRemoteBeats);
   on('beat', flashBeat);
   render();
 }

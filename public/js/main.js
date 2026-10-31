@@ -8,6 +8,8 @@
  *   permissions.js  o que cada função pode fazer
  *   store.js        estado + eventos
  *   net.js          WebSocket da sala
+ *   setlist-text.js colar/compartilhar repertório em texto
+ *   shortcuts.js    atalhos do teclado do computador
  *   actions.js      toda ação passa por dispatch()
  *   views/*.js      telas (cada uma escuta o evento 'view' e se atualiza)
  */
@@ -21,6 +23,8 @@ import { initSetlist } from './views/setlist.js';
 import { initRoom } from './views/room.js';
 import { initAuth } from './views/auth.js';
 import { initSettings } from './views/settings.js';
+import { initCues } from './views/cues.js';
+import { initShortcuts } from './shortcuts.js';
 
 initUi();
 initPads();
@@ -31,6 +35,8 @@ initSetlist();
 initRoom();
 initAuth();
 initSettings();
+initCues();
+initShortcuts();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

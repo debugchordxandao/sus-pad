@@ -15,6 +15,7 @@ export const CAPABILITIES = [
   { id: 'metro', name: 'Click' },
   { id: 'setlist', name: 'Músicas' },
   { id: 'mixer', name: 'Mixer' },
+  { id: 'cues', name: 'Sinais' },
   { id: 'panic', name: 'Pânico' }
 ];
 
@@ -23,6 +24,7 @@ export const COMMAND_CAPABILITY = {
   pad_on: 'pads',
   pad_off: 'pads',
   pad_preset: 'pads',
+  pad_opts: 'pads',
   drum_hit: 'drums',
   drum_kit: 'drums',
   metro: 'metro',
@@ -39,7 +41,9 @@ export const COMMAND_CAPABILITY = {
   setlist_edit: 'setlist',
   setlist_delete: 'setlist',
   setlist_reorder: 'setlist',
-  setlist_select: 'setlist'
+  setlist_select: 'setlist',
+  setlist_import: 'setlist',
+  cue: 'cues'
 };
 
 /** Padrão: tudo liberado (como o app funcionava antes). */

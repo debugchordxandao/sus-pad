@@ -18,7 +18,14 @@ import {
 export const AUDIO_CACHE = 'padstudio-audio-v1';
 const LOOKAHEAD_S = 0.12;
 const TICK_MS = 25;
-const TONE_CROSSFADE_S = 1.0;
+const MIN_CUTOFF_HZ = 300;
+const MAX_CUTOFF_HZ = 20000;
+
+/** Brilho 0–100 → frequência de corte (escala logarítmica, como o ouvido percebe). */
+export function brightnessToHz(brightness) {
+  const b = Math.max(0, Math.min(100, Number(brightness))) / 100;
+  return MIN_CUTOFF_HZ * (MAX_CUTOFF_HZ / MIN_CUTOFF_HZ) ** b;
+}
 
 const hasCacheApi = () => typeof caches !== 'undefined';
 
@@ -73,6 +80,8 @@ export class PadStudioAudioEngine {
     this.targetPreset = DEFAULT_PRESET; // timbre escolhido (pode estar carregando)
     this.activeToneIndex = null;
     this.activeVoice = null;
+    this.padBrightness = 90; // 0–100: filtro passa-baixa do pad
+    this.padFade = 1.0;      // segundos de transição entre tons e ao parar
 
     // Bateria
     this.drumKit = DEFAULT_KIT;
@@ -88,6 +97,8 @@ export class PadStudioAudioEngine {
     this.clickSound = DEFAULT_CLICK;
     this.onBeat = null;
     this.ticker = null;
+    this.anchor = null;      // { time (ctx), beat }: referência para os celulares mostrarem o tempo
+    this.reanchor = false;
 
     this.volumes = { pad: 90, drums: 85, metro: 80, master: 90 };
 
@@ -126,6 +137,11 @@ export class PadStudioAudioEngine {
       };
       const master = gain(this.volumes.master, limiter);
       const pad = gain(this.volumes.pad, master);
+      const padFilter = ctx.createBiquadFilter();
+      padFilter.type = 'lowpass';
+      padFilter.Q.value = 0.5;
+      padFilter.frequency.value = brightnessToHz(this.padBrightness);
+      padFilter.connect(pad);
       const drums = gain(this.volumes.drums, master);
       const metro = ctx.createGain();
       metro.gain.value = this.volumes.metro / 100;
@@ -137,7 +153,7 @@ export class PadStudioAudioEngine {
       } else {
         metro.connect(master);
       }
-      this.buses = { master, pad, drums, metro, panner };
+      this.buses = { master, pad, padFilter, drums, metro, panner };
       this.ticker = createTicker(() => this.scheduleClicks());
     }
 
@@ -280,7 +296,7 @@ export class PadStudioAudioEngine {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const voiceGain = ctx.createGain();
-    voiceGain.connect(this.buses.pad);
+    voiceGain.connect(this.buses.padFilter);
 
     const sources = [];
     const prepared = sound.attack ? sound : null;
@@ -317,7 +333,7 @@ export class PadStudioAudioEngine {
         voiceGain.disconnect();
       }
     };
-    if (previous) this.fadeOut(previous, TONE_CROSSFADE_S);
+    if (previous) this.fadeOut(previous, this.padFade);
   }
 
   fadeOut(voice, seconds) {
@@ -328,10 +344,25 @@ export class PadStudioAudioEngine {
     setTimeout(() => voice.stop(), (seconds + 0.1) * 1000);
   }
 
-  stopPad(fadeSeconds = 0.4) {
+  stopPad(fadeSeconds = Math.min(this.padFade, 2)) {
     if (this.activeVoice) this.fadeOut(this.activeVoice, fadeSeconds);
     this.activeVoice = null;
     this.activeToneIndex = null;
+  }
+
+  setPadOptions({ brightness, fade } = {}) {
+    if (Number.isFinite(brightness)) {
+      this.padBrightness = Math.max(0, Math.min(100, Math.round(brightness)));
+      const freq = this.buses.padFilter?.frequency;
+      if (freq) {
+        const hz = brightnessToHz(this.padBrightness);
+        freq.cancelScheduledValues(this.ctx.currentTime);
+        // Tocando: desliza suave. Parado: aplica direto (o navegador não processa filtro sem áudio)
+        if (this.activeVoice) freq.setTargetAtTime(hz, this.ctx.currentTime, 0.05);
+        else freq.value = hz;
+      }
+    }
+    if (Number.isFinite(fade)) this.padFade = Math.max(0.2, Math.min(6, Math.round(fade * 10) / 10));
   }
 
   get padLoading() {
@@ -421,12 +452,15 @@ export class PadStudioAudioEngine {
     this.sub = 0;
     this.beatsLeft = this.countIn ? this.beatsPerBar : Infinity;
     this.nextTime = this.ctx.currentTime + 0.05;
+    this.anchor = { time: this.nextTime, beat: 0 };
+    this.reanchor = false;
     this.ticker.start();
     this.scheduleClicks();
   }
 
   stopMetronome() {
     this.metroPlaying = false;
+    this.anchor = null;
     this.ticker?.stop();
     clearTimeout(this.countInTimer);
   }
@@ -445,7 +479,13 @@ export class PadStudioAudioEngine {
           this.countInTimer = setTimeout(() => { this.metroPlaying = false; this.emit(); }, endsIn);
           return;
         }
-        this.click(this.nextTime, this.beat === 0 ? 'accent' : 'normal', this.beat);
+        if (this.reanchor) {
+          // BPM ou compasso mudou: nova referência de tempo para os celulares
+          this.reanchor = false;
+          this.anchor = { time: this.nextTime, beat: this.beat };
+          setTimeout(() => this.emit(), 0);
+        }
+        this.click(this.nextTime, this.accentFor(this.beat), this.beat);
         this.beatsLeft -= 1;
       } else if (this.beatsLeft > 0) {
         this.click(this.nextTime, 'sub', this.beat);
@@ -461,18 +501,27 @@ export class PadStudioAudioEngine {
     }
   }
 
+  /** Tempo 1 acentuado; no 6/8 o tempo 4 também (acento secundário, mais suave). */
+  accentFor(beat) {
+    if (beat === 0) return 'accent';
+    if (this.timeSig === '6/8' && beat === 3) return 'accent2';
+    return 'normal';
+  }
+
   click(time, kind, beat) {
     const urls = clickUrls(this.clickSound);
-    const buffer = this.buffers.get(kind === 'accent' ? urls.accent : urls.normal);
+    const url = kind === 'accent' || kind === 'accent2' ? urls.accent : urls.normal;
+    const buffer = this.buffers.get(url);
     if (!buffer) {
-      this.getBuffer(kind === 'accent' ? urls.accent : urls.normal);
+      this.getBuffer(url);
       return; // nunca tocar um click atrasado
     }
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
-    if (kind === 'sub') {
+    const level = { sub: 0.4, accent2: 0.6 }[kind];
+    if (level) {
       const g = this.ctx.createGain();
-      g.gain.value = 0.4;
+      g.gain.value = level;
       src.connect(g);
       g.connect(this.buses.metro);
     } else {
@@ -488,11 +537,16 @@ export class PadStudioAudioEngine {
 
   setMetronomeBpm(bpm) {
     const n = parseInt(bpm, 10);
-    if (!Number.isNaN(n)) this.bpm = Math.max(30, Math.min(300, n));
+    if (Number.isNaN(n)) return;
+    const value = Math.max(30, Math.min(300, n));
+    if (value !== this.bpm && this.metroPlaying) this.reanchor = true;
+    this.bpm = value;
   }
 
   setMetronomeTimeSig(timeSig) {
-    this.timeSig = typeof timeSig === 'string' ? timeSig : '4/4';
+    const next = typeof timeSig === 'string' ? timeSig : '4/4';
+    if (next !== this.timeSig && this.metroPlaying) this.reanchor = true;
+    this.timeSig = next;
     this.beatsPerBar = parseInt(this.timeSig.split('/')[0], 10) || 4;
     if (this.beat >= this.beatsPerBar) this.beat = 0;
   }
@@ -510,6 +564,19 @@ export class PadStudioAudioEngine {
       this.clickSound = clickSound;
       Object.values(clickUrls(clickSound)).forEach(u => this.getBuffer(u));
     }
+  }
+
+  /**
+   * Momento (relógio de parede, ms) de um tempo de referência do click, já somada a latência
+   * de saída do áudio. Os celulares usam isso para piscar o tempo junto com o som do host.
+   */
+  metroAnchorWallClock() {
+    if (!this.metroPlaying || !this.anchor || !this.ctx) return null;
+    const outputLatency = (this.ctx.outputLatency || this.ctx.baseLatency || 0) * 1000;
+    return {
+      at: Math.round(Date.now() + (this.anchor.time - this.ctx.currentTime) * 1000 + outputLatency),
+      beat: this.anchor.beat
+    };
   }
 
   // ------------------------------------------------------------------
