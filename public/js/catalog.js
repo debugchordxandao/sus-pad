@@ -43,18 +43,6 @@ const pad = (name, file, color) => ({ name, file, color });
 
 export const DRUM_KITS = [
   {
-    id: 'kit_3', name: 'Rock Worship', pads: [
-      pad('Bumbo', 'kit_3/kick', '#FF453A'),
-      pad('Caixa', 'kit_3/snare', '#FF9F0A'),
-      pad('Chimbal fechado', 'kit_3/hihat', '#30D158'),
-      pad('Chimbal aberto', 'kit_3/hihat_open', '#64D2FF'),
-      pad('Tom 1', 'kit_3/tom_1', '#5E5CE6'),
-      pad('Tom 2', 'kit_3/tom_2', '#BF5AF2'),
-      pad('Surdo', 'kit_3/tom_3', '#AF52DE'),
-      pad('Prato', 'kit_3/crash', '#FFD60A')
-    ]
-  },
-  {
     id: 'kit_1', name: 'Worship Claps & Sub-Kick', pads: [
       pad('Sub kick', 'kit_1/sub_kick', '#FF375F'),
       pad('Kick punch', 'kit_1/kick_1', '#FF9F0A'),
@@ -64,6 +52,18 @@ export const DRUM_KITS = [
       pad('Tom 3', 'kit_1/tom_3', '#5E5CE6'),
       pad('Tumb', 'kit_1/tumb_1', '#FF9500'),
       pad('Wood click', 'kit_1/wood_1', '#0A84FF')
+    ]
+  },
+  {
+    id: 'kit_3', name: 'Rock Worship', pads: [
+      pad('Bumbo', 'kit_3/kick', '#FF453A'),
+      pad('Caixa', 'kit_3/snare', '#FF9F0A'),
+      pad('Chimbal fechado', 'kit_3/hihat', '#30D158'),
+      pad('Chimbal aberto', 'kit_3/hihat_open', '#64D2FF'),
+      pad('Tom 1', 'kit_3/tom_1', '#5E5CE6'),
+      pad('Tom 2', 'kit_3/tom_2', '#BF5AF2'),
+      pad('Surdo', 'kit_3/tom_3', '#AF52DE'),
+      pad('Prato', 'kit_3/crash', '#FFD60A')
     ]
   },
   {
@@ -104,7 +104,7 @@ export const DRUM_KITS = [
   }
 ];
 
-export const DEFAULT_KIT = 'kit_3';
+export const DEFAULT_KIT = 'kit_1';
 export const KIT_IDS = DRUM_KITS.map(k => k.id);
 
 export function getKit(kitId) {
