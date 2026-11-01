@@ -1,5 +1,5 @@
 /**
- * PadStudio Live — ponto de entrada.
+ * Sus Pad — ponto de entrada.
  *
  * Organização:
  *   catalog.js      sons (timbres, kits, clicks) — fonte única

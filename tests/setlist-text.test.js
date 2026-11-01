@@ -56,8 +56,8 @@ test('biblioteca importa várias músicas de uma vez respeitando o limite', asyn
   const { Library, MAX_SONGS } = await load('library.js');
   const lib = new Library({ getItem: () => null, setItem: () => {} });
   assert.equal(lib.addSongs([{ title: 'Uma' }, { title: 'Duas' }]), 2);
-  assert.equal(lib.songs.length, 6);
+  assert.equal(lib.songs.length, 2);
   const many = Array.from({ length: MAX_SONGS }, (_, i) => ({ title: `M${i}` }));
-  assert.equal(lib.addSongs(many), MAX_SONGS - 6);
+  assert.equal(lib.addSongs(many), MAX_SONGS - 2);
   assert.equal(lib.songs.length, MAX_SONGS);
 });

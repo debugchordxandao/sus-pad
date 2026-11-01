@@ -1,6 +1,6 @@
 {
-  "name": "PadStudio Live",
-  "short_name": "PadStudio",
+  "name": "Sus Pad",
+  "short_name": "Sus Pad",
   "description": "Pads, bateria, metrônomo e repertório sincronizados para banda ao vivo.",
   "start_url": "./index.html",
   "display": "standalone",

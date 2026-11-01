@@ -9,6 +9,14 @@ function memoryStorage(initial = {}) {
   return { getItem: k => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); }, data };
 }
 
+const SAMPLE_SONGS = [
+  { id: '1', title: 'Música 1', keyIndex: 0, bpm: 120, timeSig: '4/4', preset: 'warm_pad' },
+  { id: '2', title: 'Música 2', keyIndex: 2, bpm: 130, timeSig: '4/4', preset: 'worship' },
+  { id: '3', title: 'Música 3', keyIndex: 5, bpm: 70, timeSig: '6/8', preset: 'pad_shimmer' },
+  { id: '4', title: 'Música 4', keyIndex: 7, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
+];
+const seededStorage = () => memoryStorage({ padstudio_library: JSON.stringify({ lists: [{ id: 'l1', name: 'Repertório', songs: SAMPLE_SONGS }], activeListId: 'l1' }) });
+
 test('normalizeSong limpa e limita tudo que vem de fora', async () => {
   const { normalizeSong } = await load('library.js');
   const s = normalizeSong({ title: '  <b>x</b>\n'.repeat(30), keyIndex: 99, bpm: 'abc', timeSig: '7/8', preset: 'hack', notes: 5 });
@@ -31,7 +39,7 @@ test('migra o repertório antigo (array) para a biblioteca nova', async () => {
 
 test('vários repertórios: criar, trocar, renomear e excluir (sempre sobra um)', async () => {
   const { Library } = await load('library.js');
-  const lib = new Library(memoryStorage());
+  const lib = new Library(seededStorage());
   const first = lib.list.id;
   const sunday = lib.addList('Domingo');
   assert.equal(lib.list.id, sunday.id);
@@ -47,7 +55,7 @@ test('vários repertórios: criar, trocar, renomear e excluir (sempre sobra um)'
 
 test('reordenar ignora ids desconhecidos e não perde músicas', async () => {
   const { Library } = await load('library.js');
-  const lib = new Library(memoryStorage());
+  const lib = new Library(seededStorage());
   const ids = lib.songs.map(s => s.id);
   lib.reorder([ids[3], 'inexistente', ids[0]]);
   assert.deepEqual(lib.songs.map(s => s.id), [ids[3], ids[0], ids[1], ids[2]]);
@@ -55,7 +63,7 @@ test('reordenar ignora ids desconhecidos e não perde músicas', async () => {
 
 test('próxima música segue a ordem e para no fim', async () => {
   const { Library } = await load('library.js');
-  const lib = new Library(memoryStorage());
+  const lib = new Library(seededStorage());
   assert.equal(lib.nextSong().id, lib.songs[0].id, 'sem música ativa, começa da primeira');
   lib.activeSongId = lib.songs[2].id;
   assert.equal(lib.nextSong().id, lib.songs[3].id);
@@ -65,7 +73,7 @@ test('próxima música segue a ordem e para no fim', async () => {
 
 test('salva no armazenamento e marca a data da alteração', async () => {
   const { Library, STORAGE_KEY } = await load('library.js');
-  const storage = memoryStorage();
+  const storage = seededStorage();
   const lib = new Library(storage);
   lib.updateSong(lib.songs[0].id, { bpm: 77 });
   const saved = JSON.parse(storage.data[STORAGE_KEY]);

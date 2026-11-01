@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - Database Module
+ * Sus Pad - Database Module
  * Robust SQLite (better-sqlite3) persistence with WAL mode and atomic transactions
  */
 

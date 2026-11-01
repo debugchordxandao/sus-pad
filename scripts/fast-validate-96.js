@@ -1,5 +1,5 @@
 /**
- * Validação Oficial dos 96 Pads - PadStudio Live
+ * Validação Oficial dos 96 Pads - Sus Pad
  * Critérios:
  * 1. RMS em janelas de 100 ms ao redor de cada emenda <= 1.5 dB
  * 2. Descontinuidade máxima de forma de onda <= 0.02

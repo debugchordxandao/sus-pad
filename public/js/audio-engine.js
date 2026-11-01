@@ -1,5 +1,5 @@
 /**
- * Motor de áudio do PadStudio Live (roda no host e no modo solo).
+ * Motor de áudio do Sus Pad (roda no host e no modo solo).
  *
  * - Pads em loop contínuo com crossfade calibrado (audio/pad-loops.json)
  * - Troca de timbre sem silêncio: o timbre atual segue tocando até o novo estar pronto

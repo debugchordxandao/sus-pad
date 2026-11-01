@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - Collaborative Band Server
+ * Sus Pad - Collaborative Band Server
  * Express + WebSocket (TCP_NODELAY) + REST API + HTTPS optional
  */
 
@@ -556,7 +556,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const ips = getLocalIpAddresses();
   const scheme = isHttps ? 'https' : 'http';
   console.log('====================================================');
-  console.log('  🎵 PadStudio Live - Servidor de Banda ao Vivo 🎵  ');
+  console.log('  🎵 Sus Pad - Servidor de Banda ao Vivo 🎵  ');
   console.log('====================================================');
   console.log(`\n• Acesso Local no Mac/PC:`);
   console.log(`  ${scheme}://localhost:${PORT}`);

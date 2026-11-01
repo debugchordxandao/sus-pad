@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - Auth Module
+ * Sus Pad - Auth Module
  * JWT Authentication, Bcrypt Password Hashing, Role & Room PIN Validation
  */
 

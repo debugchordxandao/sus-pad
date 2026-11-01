@@ -1,11 +1,11 @@
 /**
- * PadStudio Live — Service Worker
+ * Sus Pad — Service Worker
  * - App (HTML/JS/CSS): rede primeiro, cópia salva quando offline
  * - Ícones e vídeo: cache primeiro
  * - Áudio: fica a cargo do motor de áudio (cache 'padstudio-audio-*'), que este SW nunca apaga
  */
 
-const SHELL_CACHE = 'padstudio-shell-v8';
+const SHELL_CACHE = 'padstudio-shell-v9';
 const SHELL_PREFIX = 'padstudio-shell-';
 const LEGACY_PREFIX = 'padstudio-live-';
 

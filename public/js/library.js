@@ -62,12 +62,7 @@ export function normalizeList(input) {
   };
 }
 
-export const DEFAULT_SONGS = [
-  { id: '1', title: 'A Casa é Sua', keyIndex: 7, bpm: 130, timeSig: '4/4', preset: 'warm_pad' },
-  { id: '2', title: 'Ousado Amor', keyIndex: 8, bpm: 68, timeSig: '6/8', preset: 'pad_shimmer' },
-  { id: '3', title: 'Lindo És', keyIndex: 0, bpm: 72, timeSig: '4/4', preset: 'worship' },
-  { id: '4', title: 'Ruja o Leão', keyIndex: 2, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
-];
+export const DEFAULT_SONGS = [];
 
 /** Aceita o formato antigo (array de músicas) e o novo ({ lists, activeListId }). */
 export function normalizeLibrary(raw) {

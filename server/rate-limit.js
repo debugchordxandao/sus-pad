@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - Rate limiting compartilhado (WebSocket + HTTP)
+ * Sus Pad - Rate limiting compartilhado (WebSocket + HTTP)
  * Tudo em memória, com limpeza periódica para não crescer indefinidamente.
  */
 

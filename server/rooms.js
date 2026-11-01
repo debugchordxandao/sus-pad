@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - Room Manager Module
+ * Sus Pad - Room Manager Module
  * Manages rooms, role permissions, PIN security, state synchronization,
  * and SQLite persistence across server reboots.
  */

@@ -1,5 +1,5 @@
 /**
- * PadStudio Live - API Routes
+ * Sus Pad - API Routes
  * Auth endpoints, Room management, PIN validation, SSE Stream & Action Dispatch
  */
 

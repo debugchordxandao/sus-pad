@@ -1,4 +1,4 @@
-# PadStudio Live
+# Sus Pad
 
 Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet ligado à mesa de som é o **host** (a saída de áudio). Os músicos controlam tudo pelo celular, pela rede local ou pela internet.
 

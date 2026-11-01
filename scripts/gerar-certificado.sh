@@ -22,7 +22,7 @@ else
   SAN="DNS:localhost,IP:127.0.0.1"
   for ip in $IPS; do SAN="$SAN,IP:$ip"; done
   openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 825 \
-    -keyout key.pem -out cert.pem -subj "/CN=PadStudio Live" -addext "subjectAltName=$SAN"
+    -keyout key.pem -out cert.pem -subj "/CN=Sus Pad" -addext "subjectAltName=$SAN"
   echo
   echo "Pronto. Na primeira vez, cada celular vai mostrar um aviso de segurança: toque em 'Avançado' e continue."
 fi
