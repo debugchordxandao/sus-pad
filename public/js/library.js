@@ -24,6 +24,12 @@ function cleanText(value, max) {
   return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
 }
 
+function cleanFade(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(Math.min(6, Math.max(0.2, n)) * 10) / 10;
+}
+
 export function normalizeSong(input, base = {}) {
   const src = { ...base, ...(input && typeof input === 'object' ? input : {}) };
   const keyIndex = clampInt(src.keyIndex, 0, 11, 0);
@@ -35,6 +41,8 @@ export function normalizeSong(input, base = {}) {
     timeSig: TIME_SIGNATURES.includes(src.timeSig) ? src.timeSig : '4/4',
     preset: PRESET_IDS.includes(src.preset) ? src.preset : DEFAULT_PRESET,
     notes: cleanText(src.notes, 140),
+    // Tempo de fade do pad ao entrar nesta música (0 = usar o ajuste geral)
+    fade: cleanFade(src.fade),
     // Cifra colada (texto) e o tom em que ela foi escrita; a tela transpõe para o tom da música
     chart: cleanChart(src.chart),
     chartKey: clampInt(src.chartKey, 0, 11, keyIndex)
@@ -145,6 +153,24 @@ export class Library {
     this.data = normalizeLibrary(raw);
     try { this.storage?.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ }
     this.listeners.forEach(fn => fn(this.data));
+  }
+
+  /** Acrescenta um repertório vindo de fora (link ou arquivo), sem mexer nos que já existem. */
+  importList(raw) {
+    if (this.data.lists.length >= MAX_LISTS) return null;
+    const list = normalizeList({ ...raw, id: undefined, songs: (raw?.songs || []).map(s => ({ ...s, id: undefined })) });
+    this.data.lists.push(list);
+    this.data.activeListId = list.id;
+    this.activeSongId = null;
+    this.save();
+    return list;
+  }
+
+  /** Troca tudo pelo conteúdo de um backup e conta como alteração local (vai para a nuvem). */
+  restore(raw) {
+    this.data = normalizeLibrary(raw);
+    this.activeSongId = null;
+    this.save();
   }
 
   // Repertórios

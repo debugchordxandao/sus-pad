@@ -1,5 +1,5 @@
 /**
- * Sus Pad - Rate limiting compartilhado (WebSocket + HTTP)
+ * PadStudio Live - Rate limiting compartilhado (WebSocket + HTTP)
  * Tudo em memória, com limpeza periódica para não crescer indefinidamente.
  */
 
@@ -88,11 +88,13 @@ const pinLimiter = createFailureLimiter({ maxFailures: 5, lockMs: 10 * 60 * 1000
 // Códigos de sala inexistentes: impede descobrir salas sem PIN testando códigos
 const roomLookupLimiter = createFailureLimiter({ maxFailures: 10, lockMs: 10 * 60 * 1000, label: 'Código de sala' });
 const authLimiter = createWindowLimiter({ max: 20, windowMs: 10 * 60 * 1000 });
+const shareLimiter = createWindowLimiter({ max: 30, windowMs: 10 * 60 * 1000 });
 
 setInterval(() => {
   pinLimiter.prune();
   roomLookupLimiter.prune();
   authLimiter.prune();
+  shareLimiter.prune();
 }, 5 * 60 * 1000).unref();
 
-module.exports = { getClientIp, pinLimiter, roomLookupLimiter, authLimiter, createFailureLimiter };
+module.exports = { getClientIp, pinLimiter, roomLookupLimiter, authLimiter, shareLimiter, createFailureLimiter };

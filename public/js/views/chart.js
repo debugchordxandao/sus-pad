@@ -146,6 +146,8 @@ function render() {
   document.querySelector('#tab-chart .chart-size').classList.toggle('hidden', !cur || editorVisible);
   $('chart-empty').textContent = local || cur ? '' : (song ? 'Esta música não tem cifra.' : 'Nenhuma música ativa.');
   $('chart-title').textContent = song ? song.title : '';
+  $('chart-notes').textContent = song?.notes || '';
+  $('chart-notes').classList.toggle('hidden', !song?.notes || editorVisible);
   if (editorVisible) stopScroll();
 
   if (!cur) { $('chart-key').textContent = ''; shown = ''; renderTools(); return; }

@@ -97,3 +97,27 @@ test('cifra: guarda o texto e o tom, limpa a colagem e sobrevive a edições par
   assert.equal(saved.chartKey, 0);
   assert.equal(saved.keyIndex, 2);
 });
+
+test('fade por música: 0 = padrão, limitado entre 0,2 e 6 s', async () => {
+  const { normalizeSong } = await load('library.js');
+  assert.equal(normalizeSong({ title: 'A' }).fade, 0);
+  assert.equal(normalizeSong({ title: 'A', fade: '3' }).fade, 3);
+  assert.equal(normalizeSong({ title: 'A', fade: 99 }).fade, 6);
+  assert.equal(normalizeSong({ title: 'A', fade: 0.01 }).fade, 0.2);
+  assert.equal(normalizeSong({ title: 'A', fade: 'abc' }).fade, 0);
+});
+
+test('importList acrescenta um repertório novo com ids próprios; restore troca tudo', async () => {
+  const { Library } = await load('library.js');
+  const lib = new Library(null);
+  const before = lib.lists.length;
+  const added = lib.importList({ name: 'Culto', songs: [{ id: 'x1', title: 'Um', keyIndex: 2, chart: 'C  G' }, { id: 'x1', title: 'Dois' }] });
+  assert.equal(lib.lists.length, before + 1);
+  assert.equal(lib.list.id, added.id);
+  assert.equal(added.songs.length, 2);
+  assert.notEqual(added.songs[0].id, added.songs[1].id);
+  assert.equal(added.songs[0].chart, 'C  G');
+  lib.restore({ lists: [{ id: 'a', name: 'Só este', songs: [{ title: 'Z' }] }], activeListId: 'a' });
+  assert.equal(lib.lists.length, 1);
+  assert.equal(lib.songs[0].title, 'Z');
+});

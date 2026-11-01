@@ -1,7 +1,9 @@
-import { store, on, savePrefs } from '../store.js';
+import { store, on, savePrefs, isLocal } from '../store.js';
+import { commit } from '../actions.js';
 import { $, openModal, closeModal, toast } from '../ui.js';
 import { enableMidi, disableMidi, midiSupported, midiDevices } from '../midi.js';
 import { SusPadAudioEngine } from '../audio-engine.js';
+import { exportBackup, readBackup } from '../share.js';
 
 function renderMidiStatus(devices = midiDevices()) {
   const status = $('midi-status');
@@ -58,6 +60,7 @@ async function downloadAll() {
 export function initSettings() {
   $('btn-settings').addEventListener('click', () => {
     $('settings-midi').checked = !!store.prefs.midi;
+    $('settings-backup-group').classList.toggle('hidden', !isLocal());
     renderMidiStatus();
     renderOffline();
     openModal($('modal-settings'));
@@ -66,6 +69,25 @@ export function initSettings() {
   $('settings-midi').addEventListener('change', (e) => setMidi(e.target.checked));
   $('btn-download-all').addEventListener('click', downloadAll);
   on('midi', renderMidiStatus);
+
+  // Backup: só o host/solo tem a biblioteca completa
+  $('btn-backup-export').addEventListener('click', exportBackup);
+  $('btn-backup-import').addEventListener('click', () => $('backup-file').click());
+  $('backup-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const library = await readBackup(file);
+      const count = library.lists.reduce((n, l) => n + (Array.isArray(l.songs) ? l.songs.length : 0), 0);
+      if (!window.confirm(`Restaurar ${count} músicas e substituir o repertório atual?`)) return;
+      store.library.restore(library);
+      commit();
+      toast('Backup restaurado', 'success');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 
   // Reativa o MIDI ao abrir o app, se estava ligado
   if (store.prefs.midi && midiSupported()) enableMidi().catch(() => {});

@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Sus Pad">
   <title>Sus Pad</title>
   <link rel="icon" href="favicon.ico">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
   <link rel="modulepreload" href="js/main.js">
@@ -177,6 +177,7 @@
                 <button id="btn-metro-full-play" class="btn btn-primary btn-lg">Iniciar</button>
                 <button id="btn-metro-full-tap" class="btn btn-secondary btn-lg">Tap</button>
               </div>
+              <button id="btn-bpm-save" class="text-btn hidden"></button>
             </div>
 
             <div class="group">
@@ -284,6 +285,7 @@
               <button type="submit" class="btn btn-primary">Salvar cifra</button>
             </div>
           </form>
+          <p id="chart-notes" class="chart-notes hidden"></p>
           <div id="chart-body" class="chart-body" tabindex="0"></div>
           <p id="chart-empty" class="chart-empty"></p>
         </section>
@@ -467,6 +469,10 @@
               <span class="row-label">Timbre</span>
               <select id="song-preset" class="row-input row-select"></select>
             </label>
+            <label class="row">
+              <span class="row-label">Fade do pad</span>
+              <select id="song-fade" class="row-input row-select"></select>
+            </label>
           </div>
         </div>
         <div class="group">
@@ -546,6 +552,14 @@
           </div>
           <button id="btn-download-all" class="btn btn-secondary full-width">Baixar todos os sons</button>
           <div class="group-footer">Cerca de 85 MB. Depois disso o app toca mesmo com a internet instável.</div>
+        </div>
+        <div class="group" id="settings-backup-group">
+          <div class="group-header">Backup</div>
+          <div class="group-body">
+            <div class="row"><button id="btn-backup-export" class="text-btn">Salvar backup</button></div>
+            <div class="row"><button id="btn-backup-import" class="text-btn">Restaurar backup</button></div>
+          </div>
+          <input type="file" id="backup-file" accept="application/json,.json" hidden>
         </div>
         <div class="group">
           <div class="group-header">Teclado do computador</div>

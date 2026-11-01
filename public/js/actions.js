@@ -50,6 +50,20 @@ export function buildView() {
   };
 }
 
+// Fade geral do pad, guardado enquanto uma música com fade próprio está ativa
+let baseFade = null;
+
+function applySongFade(song) {
+  const e = engine();
+  if (song.fade) {
+    if (baseFade === null) baseFade = e.padFade;
+    e.setPadOptions({ fade: song.fade });
+  } else if (baseFade !== null) {
+    e.setPadOptions({ fade: baseFade });
+    baseFade = null;
+  }
+}
+
 function activateSong(song, silent = false) {
   if (!song) return;
   const e = engine();
@@ -58,6 +72,7 @@ function activateSong(song, silent = false) {
     emit('song-activated', song);
     return;
   }
+  applySongFade(song);
   // Toca na hora (no timbre atual) e faz crossfade para o timbre da música quando ele carregar
   e.playTone(song.keyIndex);
   e.setPadPreset(song.preset, song.keyIndex);
@@ -76,7 +91,10 @@ const executors = {
   pad_on: ({ toneIndex }) => { if (validTone(toneIndex)) engine().playTone(toneIndex); },
   pad_off: () => engine().stopPad(0.4),
   pad_preset: ({ preset }) => { engine().setPadPreset(preset); },
-  pad_opts: ({ brightness, fade }) => engine().setPadOptions({ brightness, fade }),
+  pad_opts: ({ brightness, fade }) => {
+    if (fade !== undefined) baseFade = null;
+    engine().setPadOptions({ brightness, fade });
+  },
   drum_hit: ({ padIndex, velocity }) => {
     engine().playDrumPad(padIndex, typeof velocity === 'number' ? velocity : 1);
     emit('drum-hit', padIndex);

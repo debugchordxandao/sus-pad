@@ -318,3 +318,18 @@ test('entrar com o Google: sem configuração não aparece; com configuração c
     fake.close();
   }
 });
+
+test('compartilhar repertório por link: cria código, devolve a cópia e recusa códigos inválidos', async () => {
+  const list = { name: 'Culto', songs: [{ id: 'a', title: 'Lindo És', keyIndex: 3, chart: 'C  G' }] };
+  const created = await fetch(`${srv.base}/api/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list }) });
+  assert.equal(created.status, 200);
+  const { code } = await created.json();
+  assert.match(code, /^[A-Z2-9]{8}$/);
+  const got = await (await fetch(`${srv.base}/api/share/${code.toLowerCase()}`)).json();
+  assert.equal(got.list.name, 'Culto');
+  assert.equal(got.list.songs[0].chart, 'C  G');
+  assert.equal((await fetch(`${srv.base}/api/share/AAAAAAAA`)).status, 404);
+  assert.equal((await fetch(`${srv.base}/api/share/x`)).status, 404);
+  const bad = await fetch(`${srv.base}/api/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list: { songs: [] } }) });
+  assert.equal(bad.status, 400);
+});

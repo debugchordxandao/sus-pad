@@ -74,6 +74,13 @@ function render() {
   $('metro-count-in').checked = !!v.countIn;
   $('metro-subdivide').checked = !!v.subdivide;
 
+  // Botão para guardar o BPM acertado (ex.: no tap) na música ativa
+  const song = (v.songs || []).find(s => s.id === v.activeSongId);
+  const save = $('btn-bpm-save');
+  const differs = !!song && song.bpm !== v.bpm;
+  save.classList.toggle('hidden', !differs);
+  if (differs) save.textContent = `Salvar ${v.bpm} BPM em ${song.title}`;
+
   setRangeValue($('metro-pan'), v.metroPan);
   $('pan-current-label').textContent = v.metroPan < -0.2 ? 'Esquerda' : v.metroPan > 0.2 ? 'Direita' : 'Centro';
 }
@@ -141,6 +148,11 @@ export function initMetro() {
   holdRepeat($('bpm-plus-1'), () => setBpm(store.view.bpm + 1));
   holdRepeat($('metro-bpm-minus'), () => setBpm(store.view.bpm - 1));
   holdRepeat($('metro-bpm-plus'), () => setBpm(store.view.bpm + 1));
+
+  $('btn-bpm-save').addEventListener('click', () => {
+    const v = store.view;
+    if (v.activeSongId) dispatch('setlist_edit', { songId: v.activeSongId, updates: { bpm: v.bpm } });
+  });
 
   $('metro-time-sig').addEventListener('change', (e) => dispatch('timesig', { value: e.target.value }));
   $('metro-click-sound').addEventListener('change', (e) => dispatch('metro_opts', { clickSound: e.target.value }));

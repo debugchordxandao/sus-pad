@@ -43,6 +43,12 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS shares (
+    code TEXT PRIMARY KEY,
+    list_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS rooms (
     code TEXT PRIMARY KEY,
     host_token TEXT NOT NULL,
@@ -273,7 +279,22 @@ function deleteRoomDb(code) {
   stmtDeleteRoom.run(code);
 }
 
+const SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const stmtCreateShare = db.prepare('INSERT INTO shares (code, list_json, created_at) VALUES (?, ?, ?)');
+const stmtGetShare = db.prepare('SELECT list_json FROM shares WHERE code = ? AND created_at > ?');
+const stmtPruneShares = db.prepare('DELETE FROM shares WHERE created_at <= ?');
+function createShare(code, listJson) {
+  stmtPruneShares.run(Date.now() - SHARE_TTL_MS);
+  stmtCreateShare.run(code, listJson, Date.now());
+}
+function getShare(code) {
+  const row = stmtGetShare.get(code, Date.now() - SHARE_TTL_MS);
+  return row ? row.list_json : null;
+}
+
 module.exports = {
+  createShare,
+  getShare,
   db,
   getUserByEmail,
   getUserById,

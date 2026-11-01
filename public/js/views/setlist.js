@@ -5,6 +5,7 @@ import { PAD_PRESETS, TIME_SIGNATURES } from '../catalog.js';
 import { normalizeSong } from '../library.js';
 import { parseSetlistText, formatSetlistText } from '../setlist-text.js';
 import { detectKey } from '../chords.js';
+import { createShareLink } from '../share.js';
 
 const NEW_LIST = '__new';
 const EDIT_LIST = '__edit';
@@ -193,6 +194,21 @@ function openImportSheet() {
 }
 
 async function shareList() {
+  // Quem tem as músicas completas (host/solo) compartilha por link; o link leva as cifras junto
+  if (isLocal()) {
+    try {
+      const list = store.library.list;
+      if (list.songs.length) {
+        const link = await createShareLink({ name: list.name, songs: list.songs });
+        if (navigator.share) {
+          try { await navigator.share({ title: list.name, url: link }); return; } catch (e) { if (e.name === 'AbortError') return; }
+        }
+        await navigator.clipboard.writeText(link);
+        toast('Link copiado. Quem abrir recebe o repertório.', 'success');
+        return;
+      }
+    } catch (e) { /* sem rede ou sem permissão: cai no texto */ }
+  }
   const text = formatSetlistText(currentListName(), store.view.songs, labels());
   try {
     if (navigator.share) {
@@ -259,6 +275,7 @@ export function openSongEditor(song) {
   $('song-timesig').value = song ? song.timeSig : store.view.timeSig;
   $('song-preset').value = song ? song.preset : store.view.padPreset;
   $('song-notes').value = song ? song.notes || '' : '';
+  $('song-fade').value = String(song ? song.fade || 0 : 0);
 
   // A cifra fica no host/solo; os controles remotos só a veem (tela Cifra)
   const local = isLocal();
@@ -278,6 +295,7 @@ export function openSongEditor(song) {
 function initEditor() {
   fillSelect($('song-timesig'), TIME_SIGNATURES.map(t => ({ id: t, name: t })));
   fillSelect($('song-preset'), PAD_PRESETS);
+  fillSelect($('song-fade'), [['0', 'Padrão'], ['1', '1 s'], ['2', '2 s'], ['3', '3 s'], ['4', '4 s'], ['6', '6 s']].map(([id, name]) => ({ id, name })));
 
   $('form-song').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -288,6 +306,7 @@ function initEditor() {
       timeSig: $('song-timesig').value,
       preset: $('song-preset').value,
       notes: $('song-notes').value,
+      fade: $('song-fade').value,
       chart: $('song-chart').value,
       chartKey: $('song-chart-key').value
     });

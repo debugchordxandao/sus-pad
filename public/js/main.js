@@ -28,6 +28,7 @@ import { initSettings } from './views/settings.js';
 import { initCues } from './views/cues.js';
 import { initChart } from './views/chart.js';
 import { initShortcuts } from './shortcuts.js';
+import { importSharedFromUrl } from './share.js';
 
 initUi();
 initPads();
@@ -41,6 +42,7 @@ initSettings();
 initCues();
 initChart();
 initShortcuts();
+importSharedFromUrl();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

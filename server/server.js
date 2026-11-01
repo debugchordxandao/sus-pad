@@ -99,6 +99,7 @@ app.use((req, res, next) => {
 });
 // O repertório da conta leva as cifras coladas, então tem limite maior (a rota exige login)
 app.use('/api/auth/library', express.json({ limit: '2mb' }));
+app.use('/api/share', express.json({ limit: '1mb' }));
 app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 

@@ -16,7 +16,7 @@ const {
 const crypto = require('node:crypto');
 const db = require('./db');
 const { verifyGoogleCredential, googleClientId } = require('./google');
-const { getClientIp, pinLimiter, roomLookupLimiter, authLimiter } = require('./rate-limit');
+const { getClientIp, pinLimiter, roomLookupLimiter, authLimiter, shareLimiter } = require('./rate-limit');
 
 const MAX_LIBRARY_BYTES = 1536 * 1024;
 const { createRoom, getRoom } = require('./rooms');
@@ -160,6 +160,34 @@ router.post('/auth/setlist', authMiddleware, (req, res) => {
 
   db.saveUserSetlist(req.user.id, songs);
   res.json({ message: 'Repertório salvo na nuvem com sucesso!' });
+});
+
+// Compartilhar um repertório por link: guarda uma cópia por 30 dias e devolve um código curto
+const SHARE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const MAX_SHARE_BYTES = 768 * 1024;
+
+router.post('/share', shareLimiter.middleware, (req, res) => {
+  const { list } = req.body || {};
+  if (!list || typeof list !== 'object' || !Array.isArray(list.songs) || list.songs.length === 0 || list.songs.length > 300) {
+    return res.status(400).json({ error: 'Repertório inválido.' });
+  }
+  const json = JSON.stringify({ name: String(list.name || 'Repertório').slice(0, 40), songs: list.songs });
+  if (json.length > MAX_SHARE_BYTES) return res.status(413).json({ error: 'Repertório grande demais para compartilhar.' });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = Array.from(crypto.randomBytes(8), b => SHARE_ALPHABET[b % SHARE_ALPHABET.length]).join('');
+    try {
+      db.createShare(code, json);
+      return res.json({ code });
+    } catch (e) { /* código repetido: sorteia outro */ }
+  }
+  res.status(500).json({ error: 'Não foi possível criar o link.' });
+});
+
+router.get('/share/:code', shareLimiter.middleware, (req, res) => {
+  const code = String(req.params.code || '').toUpperCase();
+  const json = /^[A-Z0-9]{8}$/.test(code) ? db.getShare(code) : null;
+  if (!json) return res.status(404).json({ error: 'Link inválido ou expirado.' });
+  res.json({ list: JSON.parse(json) });
 });
 
 // Biblioteca de repertórios da conta (vários repertórios). O app envia a cada alteração.

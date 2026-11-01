@@ -49,7 +49,7 @@ Sem HTTPS o app funciona normalmente. Para a tela não apagar, ele usa um vídeo
 ## Qualidade
 
 ```bash
-npm test           # 44 testes: servidor real + WebSocket, segurança, repertórios, leitura de listas, cifras e transposição, permissões, catálogo de áudio
+npm test           # 47 testes: servidor real + WebSocket, segurança, repertórios, leitura de listas, cifras e transposição, permissões, catálogo de áudio
 npm run lint       # ESLint
 npm run check      # os dois
 ```
