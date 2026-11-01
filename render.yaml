@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: sus-pad
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GOOGLE_CLIENT_ID
+        value: 925687477732-n34gkmvm7v3vr31mid859c6uqp8l1o40.apps.googleusercontent.com
+      - key: JWT_SECRET
+        generateValue: true
