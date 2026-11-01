@@ -50,9 +50,14 @@ export function buildView() {
   };
 }
 
-function activateSong(song) {
+function activateSong(song, silent = false) {
   if (!song) return;
   const e = engine();
+  if (silent) { // só seleciona a música (ex.: cifra recém-colada), sem tocar o pad nem mexer no click
+    lib().activeSongId = song.id;
+    emit('song-activated', song);
+    return;
+  }
   // Toca na hora (no timbre atual) e faz crossfade para o timbre da música quando ele carregar
   e.playTone(song.keyIndex);
   e.setPadPreset(song.preset, song.keyIndex);
@@ -88,7 +93,7 @@ const executors = {
     engine().panicStop();
     toast(fromName ? `Pânico acionado por ${fromName}` : 'Todos os sons parados', 'error');
   },
-  song_activate: ({ songId }) => activateSong(lib().getSong(songId)),
+  song_activate: ({ songId, silent }) => activateSong(lib().getSong(songId), silent === true),
   song_next: () => {
     const next = lib().nextSong();
     if (next) activateSong(next);

@@ -103,6 +103,7 @@
           <button class="nav-segment" data-tab="tab-drums" id="nav-seg-drums">Bateria</button>
           <button class="nav-segment" data-tab="tab-metro" id="nav-seg-metro">Click</button>
           <button class="nav-segment" data-tab="tab-setlist" id="nav-seg-setlist">Músicas</button>
+          <button class="nav-segment" data-tab="tab-chart" id="nav-seg-chart">Cifra</button>
           <button class="nav-segment" data-tab="tab-mixer" id="nav-seg-mixer">Mixer</button>
           <button class="nav-segment" data-tab="tab-cues" id="nav-seg-cues">Sinais</button>
         </nav>
@@ -225,6 +226,42 @@
             </div>
             <div class="songs-list" id="songs-list"></div>
           </div>
+        </section>
+
+        <!-- CIFRA -->
+        <section id="tab-chart" class="tab-pane">
+          <div class="pane-bar">
+            <div class="pane-bar-left">
+              <strong id="chart-title"></strong>
+              <span id="chart-key" class="chart-key"></span>
+            </div>
+            <div class="pane-bar-right">
+              <div class="chart-size" role="group" aria-label="Tamanho da letra">
+                <button type="button" id="btn-chart-smaller" aria-label="Diminuir letra">A−</button>
+                <button type="button" id="btn-chart-bigger" aria-label="Aumentar letra">A+</button>
+              </div>
+              <button type="button" id="btn-chart-edit" class="text-btn text-btn--strong">Colar cifra</button>
+            </div>
+          </div>
+          <form id="chart-editor" class="chart-editor hidden" autocomplete="off">
+            <div class="group">
+              <div class="group-body">
+                <label class="row" id="chart-new-title-row">
+                  <input type="text" id="chart-new-title" maxlength="80" placeholder="Nome da música" class="row-input row-input--full">
+                </label>
+                <label class="row row--stack">
+                  <textarea id="chart-input" maxlength="8000" rows="10" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Cole aqui a cifra do Cifra Club" class="row-textarea row-textarea--mono"></textarea>
+                </label>
+              </div>
+              <p class="group-footer" id="chart-hint"></p>
+            </div>
+            <div class="chart-editor-actions">
+              <button type="button" id="btn-chart-cancel" class="btn btn-secondary">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Salvar cifra</button>
+            </div>
+          </form>
+          <div id="chart-body" class="chart-body" tabindex="0"></div>
+          <p id="chart-empty" class="chart-empty"></p>
         </section>
 
         <!-- MIXER -->
@@ -430,28 +467,6 @@
         <button type="button" id="btn-song-delete" class="btn btn-destructive full-width hidden">Excluir música</button>
       </div>
     </form>
-  </div>
-
-  <!-- SHEET: CIFRA -->
-  <div id="modal-chart" class="modal-backdrop hidden">
-    <div class="modal-card modal-card--chart" role="dialog" aria-modal="true" aria-labelledby="chart-title">
-      <div class="modal-header">
-        <button type="button" class="text-btn" id="btn-close-chart">Fechar</button>
-        <h3 id="chart-title">Cifra</h3>
-        <div class="chart-size" role="group" aria-label="Tamanho da letra">
-          <button type="button" id="btn-chart-smaller" aria-label="Diminuir letra">A−</button>
-          <button type="button" id="btn-chart-bigger" aria-label="Aumentar letra">A+</button>
-        </div>
-      </div>
-      <div id="chart-body" class="chart-body" tabindex="0"></div>
-      <div class="chart-bar">
-        <div class="segmented segmented--sm" role="group" aria-label="Mudar o tom">
-          <button id="btn-chart-down" title="Descer meio tom">−½</button>
-          <button id="btn-chart-up" title="Subir meio tom">+½</button>
-        </div>
-        <span id="chart-key" class="chart-key"></span>
-      </div>
-    </div>
   </div>
 
   <!-- SHEET: REPERTÓRIO -->

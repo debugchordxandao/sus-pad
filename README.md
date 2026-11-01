@@ -14,7 +14,7 @@ Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet l
 | Bateria | 5 kits com 8 sons cada. No computador, use as teclas Q W E R · A S D F. |
 | Click | BPM, tap, compasso, 4 sons, colcheias, modo **Só contagem** (um compasso e para) e pan para mandar o click só ao fone da banda. No 6/8 o tempo 4 também é acentuado. Os celulares mostram o tempo piscando junto com o host. |
 | Músicas | Vários repertórios, arrastar para reordenar, anotações por música, **Próxima** e ±½ tom ao vivo. **Colar lista** lê a mensagem do WhatsApp (com o tom de cada música) e **Compartilhar** gera o texto para o grupo. |
-| Cifras | Em **Editar música**, cole a cifra do Cifra Club (ou de qualquer site): o app reconhece os acordes e acompanha o tom da música. O botão **Cifra**, na barra da música, abre a cifra em tela cheia em todos os aparelhos. −½/+½ transpõe a cifra e o pad juntos, e o texto muda sozinho ao passar para a próxima música. A− e A+ ajustam a letra. |
+| Cifras | Aba **Cifra**: cole a cifra do Cifra Club (ou de qualquer site) e salve. O app tira o título, reconhece os acordes e o tom, e já mostra a cifra. Sem música ativa, ele cria a música. −½/+½ (na barra da música) transpõe a cifra e o pad juntos, e o texto muda sozinho na próxima música. Todos os aparelhos da sala leem a cifra da música ativa; só o aparelho da mesa cola e edita. A− e A+ ajustam a letra. |
 | Sinais | Avisos grandes em todos os aparelhos: Repete, Última vez, Segura, Volta ao início, Fim… ou um texto livre. |
 | Mixer | Volume de pads, bateria, click e master, sincronizado com a sala. |
 | Permissões | O host escolhe o que tecladista, baterista e líder podem controlar (tela da sala). Cada músico pode informar o nome ao entrar. |
