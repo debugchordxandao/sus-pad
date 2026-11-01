@@ -22,7 +22,8 @@ export function setRejoin(fn) {
 }
 
 function wsUrl() {
-  if (window.PADSTUDIO_WS_URL) return window.PADSTUDIO_WS_URL;
+  const custom = window.SUSPAD_WS_URL || window.PADSTUDIO_WS_URL;
+  if (custom) return custom;
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${location.host}`;
 }

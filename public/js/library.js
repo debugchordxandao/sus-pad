@@ -8,7 +8,7 @@
 import { PRESET_IDS, DEFAULT_PRESET, TIME_SIGNATURES } from './catalog.js';
 import { cleanChart } from './chords.js';
 
-export const STORAGE_KEY = 'padstudio_library';
+export const STORAGE_KEY = 'suspad_library';
 const LEGACY_KEY = 'padstudio_setlist';
 export const MAX_SONGS = 300;
 export const MAX_LISTS = 50;

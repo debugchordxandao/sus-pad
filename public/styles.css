@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PadStudio Live
+   Sus Pad
    Linguagem visual: iOS / macOS (modo escuro). Fonte do sistema, sem
    dependências externas — funciona offline no culto.
    ========================================================================== */
@@ -1184,3 +1184,11 @@ body.no-setlist #chart-key-pick, body.no-setlist #btn-chart-original { display: 
 #btn-chart-original { font-size: 15px; }
 
 .google-signin { display: flex; justify-content: center; margin-bottom: 16px; min-height: 44px; }
+
+/* ---- Conta ---- */
+.auth-tabs { margin: 0 auto 16px; max-width: 260px; }
+.auth-email-toggle { display: block; margin: 4px auto 0; font-size: 15px; }
+.auth-email-toggle.hidden { display: none; }
+.avatar { width: 72px; height: 72px; margin-bottom: 8px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--fill-2); color: var(--label); font-family: var(--font-rounded); font-size: 30px; font-weight: 600; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.google-signin { margin-bottom: 8px; }

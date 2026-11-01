@@ -2,7 +2,7 @@ import { store, emit } from '../store.js';
 import { commit } from '../actions.js';
 import { $, openModal, closeModal, toast } from '../ui.js';
 
-const TOKEN_KEY = 'padstudio_auth_token';
+const TOKEN_KEY = 'suspad_auth_token';
 const SYNC_DELAY_MS = 1500;
 
 let token = null;
@@ -10,6 +10,7 @@ let mode = 'login';
 let syncTimer = null;
 let applyingRemote = false;
 let googleReady = false;
+let emailOpen = false;
 
 try { token = localStorage.getItem(TOKEN_KEY); } catch (e) { /* ignore */ }
 
@@ -27,16 +28,34 @@ async function api(path, options = {}) {
   return data;
 }
 
+const initial = (user) => (user.bandName || user.name || user.email || '?').trim().charAt(0).toUpperCase();
+
 function render() {
   const user = store.user;
   $('btn-auth-open').classList.toggle('logged', !!user);
   $('auth-pill-text').textContent = user ? (user.bandName || user.name) : 'Entrar';
-  $('form-auth').classList.toggle('hidden', !!user);
-  $('google-signin').classList.toggle('hidden', !googleReady || !!user);
+  const showForm = !googleReady || emailOpen; // com Google, o e-mail fica escondido atrás de um link
+  $('auth-guest').classList.toggle('hidden', !!user);
+  $('form-auth').classList.toggle('hidden', !showForm);
+  $('btn-auth-email-toggle').classList.toggle('hidden', !googleReady || emailOpen);
+  $('google-signin').classList.toggle('hidden', !googleReady);
+  $('auth-title').textContent = user ? 'Conta' : 'Entrar';
   $('auth-user-logged').classList.toggle('hidden', !user);
   if (user) {
     $('logged-user-name').textContent = user.bandName || user.name;
     $('logged-band-name').textContent = user.email || '';
+    const avatar = $('auth-avatar');
+    avatar.replaceChildren();
+    if (user.picture) {
+      const img = document.createElement('img');
+      img.src = user.picture;
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', () => { avatar.textContent = initial(user); img.remove(); });
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = initial(user);
+    }
   }
 }
 
@@ -166,9 +185,11 @@ async function initGoogle() {
 export function initAuth() {
   $('btn-auth-open').addEventListener('click', () => openModal($('modal-auth')));
   $('btn-close-auth').addEventListener('click', () => closeModal($('modal-auth')));
+  $('modal-auth').addEventListener('close', () => { emailOpen = false; render(); });
   $('tab-auth-login').addEventListener('click', () => setMode('login'));
   $('tab-auth-register').addEventListener('click', () => setMode('register'));
   $('form-auth').addEventListener('submit', submit);
+  $('btn-auth-email-toggle').addEventListener('click', () => { emailOpen = true; render(); $('auth-email').focus(); });
   $('btn-auth-logout').addEventListener('click', () => {
     signOut();
     toast('Você saiu da conta.');

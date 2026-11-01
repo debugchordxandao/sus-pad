@@ -1,7 +1,7 @@
 import { store, on, savePrefs } from '../store.js';
 import { $, openModal, closeModal, toast } from '../ui.js';
 import { enableMidi, disableMidi, midiSupported, midiDevices } from '../midi.js';
-import { PadStudioAudioEngine } from '../audio-engine.js';
+import { SusPadAudioEngine } from '../audio-engine.js';
 
 function renderMidiStatus(devices = midiDevices()) {
   const status = $('midi-status');
@@ -28,7 +28,7 @@ async function setMidi(enabled) {
 }
 
 async function renderOffline() {
-  const status = await PadStudioAudioEngine.offlineStatus();
+  const status = await SusPadAudioEngine.offlineStatus();
   const btn = $('btn-download-all');
   if (!status.supported) {
     $('offline-status').textContent = 'Disponível só em HTTPS';
@@ -45,7 +45,7 @@ async function downloadAll() {
   const btn = $('btn-download-all');
   btn.disabled = true;
   try {
-    const result = await PadStudioAudioEngine.downloadAll((done, total) => {
+    const result = await SusPadAudioEngine.downloadAll((done, total) => {
       btn.textContent = `Baixando… ${Math.round((done / total) * 100)}%`;
     });
     toast(result.failed ? `${result.failed} sons não baixaram. Tente de novo.` : 'Pronto: o app toca sem internet.', result.failed ? 'error' : 'success');

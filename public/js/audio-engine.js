@@ -15,7 +15,7 @@ import {
 
 // Ao substituir um arquivo de áudio mantendo o mesmo nome, aumente esta versão:
 // os aparelhos baixam tudo de novo em vez de usar a cópia antiga.
-export const AUDIO_CACHE = 'padstudio-audio-v1';
+export const AUDIO_CACHE = 'suspad-audio-v1';
 const LOOKAHEAD_S = 0.12;
 const TICK_MS = 25;
 const MIN_CUTOFF_HZ = 300;
@@ -65,7 +65,7 @@ function createTicker(onTick) {
   }
 }
 
-export class PadStudioAudioEngine {
+export class SusPadAudioEngine {
   constructor() {
     this.ctx = null;
     this.buses = {};

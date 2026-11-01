@@ -11,7 +11,7 @@ function clientId() {
   return (process.env.GOOGLE_CLIENT_ID || '').trim() || null;
 }
 
-/** Devolve { email, name } se o token é do nosso app e o e-mail está verificado; senão lança erro com `status`. */
+/** Devolve { email, name, picture } se o token é do nosso app e o e-mail está verificado; senão lança erro com `status`. */
 async function verifyGoogleCredential(credential, expectedClientId = clientId(), fetchImpl = fetch) {
   const fail = (status, message) => Object.assign(new Error(message), { status });
   if (!expectedClientId) throw fail(503, 'Entrar com o Google não está configurado neste servidor.');
@@ -31,7 +31,13 @@ async function verifyGoogleCredential(credential, expectedClientId = clientId(),
   if (!ISSUERS.has(info.iss)) throw fail(401, 'Origem do login não reconhecida.');
   if (Number(info.exp) * 1000 < Date.now()) throw fail(401, 'Login do Google expirou. Tente de novo.');
   if (String(info.email_verified) !== 'true' || typeof info.email !== 'string') throw fail(401, 'O e-mail do Google não está verificado.');
-  return { email: info.email.toLowerCase(), name: typeof info.name === 'string' ? info.name.slice(0, 60) : '' };
+  // A foto só vale se vier do domínio de imagens do Google (https)
+  let picture = null;
+  try {
+    const url = new URL(String(info.picture || ''));
+    if (url.protocol === 'https:' && /(^|\.)googleusercontent\.com$/.test(url.hostname) && url.href.length < 500) picture = url.href;
+  } catch (e) { /* sem foto */ }
+  return { email: info.email.toLowerCase(), name: typeof info.name === 'string' ? info.name.slice(0, 60) : '', picture };
 }
 
 module.exports = { verifyGoogleCredential, googleClientId: clientId };

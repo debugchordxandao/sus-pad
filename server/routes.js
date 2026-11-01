@@ -111,7 +111,7 @@ router.get('/auth/config', (req, res) => {
 // Entrar com o Google: cria a conta na primeira vez, depois só entra
 router.post('/auth/google', authLimiter.middleware, async (req, res) => {
   try {
-    const { email, name } = await verifyGoogleCredential(req.body && req.body.credential);
+    const { email, name, picture } = await verifyGoogleCredential(req.body && req.body.credential);
     let user = db.getUserByEmail(email);
     if (!user) {
       // Conta sem senha própria: guarda um segredo aleatório que ninguém conhece
@@ -120,8 +120,8 @@ router.post('/auth/google', authLimiter.middleware, async (req, res) => {
       user = db.createUser({ email, passwordHash, name: display, bandName: display });
     }
     res.json({
-      token: generateToken(user),
-      user: { id: user.id, email: user.email, name: user.name, bandName: user.bandName }
+      token: generateToken({ ...user, picture }),
+      user: { id: user.id, email: user.email, name: user.name, bandName: user.bandName, picture }
     });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ error: err.message });
@@ -144,7 +144,8 @@ router.get('/auth/me', authMiddleware, (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      bandName: user.bandName
+      bandName: user.bandName,
+      picture: req.user.picture || null
     },
     savedSetlist: db.getUserSetlist(user.id)
   });

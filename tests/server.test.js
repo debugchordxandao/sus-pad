@@ -277,8 +277,9 @@ test('entrar com o Google: sem configuração não aparece; com configuração c
     const id = new URL(req.url, 'http://x').searchParams.get('id_token');
     const base = { iss: 'accounts.google.com', aud: 'app-de-teste.apps.googleusercontent.com', exp: String(Math.floor(Date.now() / 1000) + 600), email_verified: 'true' };
     const answers = {
-      'token-valido-com-mais-de-vinte-caracteres': { ...base, email: 'Musico@Gmail.com', name: 'Músico Teste' },
+      'token-valido-com-mais-de-vinte-caracteres': { ...base, email: 'Musico@Gmail.com', name: 'Músico Teste', picture: 'https://lh3.googleusercontent.com/a/foto123' },
       'token-de-outro-app-com-mais-de-vinte-car': { ...base, aud: 'outro-app', email: 'x@gmail.com' },
+      'token-com-foto-de-site-estranho-vinte-car': { ...base, email: 'z@gmail.com', picture: 'https://site-estranho.com/foto.png' },
       'token-sem-email-verificado-mais-de-vinte': { ...base, email: 'y@gmail.com', email_verified: 'false' }
     };
     const body = answers[id];
@@ -299,8 +300,11 @@ test('entrar com o Google: sem configuração não aparece; com configuração c
     const { token, user } = await ok.json();
     assert.equal(user.email, 'musico@gmail.com');
     assert.equal(user.name, 'Músico Teste');
+    assert.equal(user.picture, 'https://lh3.googleusercontent.com/a/foto123');
+    assert.equal((await post(google, 'token-com-foto-de-site-estranho-vinte-car').then(r => r.json())).user.picture, null); // foto só do domínio do Google
     const me = await fetch(`${google.base}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
     assert.equal(me.status, 200);
+    assert.equal((await me.json()).user.picture, 'https://lh3.googleusercontent.com/a/foto123');
     // segunda vez: mesma conta, sem duplicar
     assert.equal((await (await post(google, 'token-valido-com-mais-de-vinte-caracteres')).json()).user.id, user.id);
 

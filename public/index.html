@@ -566,36 +566,40 @@
 
   <!-- SHEET: CONTA -->
   <div id="modal-auth" class="modal-backdrop hidden">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Conta da banda">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <div class="modal-header">
         <span></span>
-        <div class="segmented segmented--sm auth-tabs">
-          <button id="tab-auth-login" class="active">Entrar</button>
-          <button id="tab-auth-register">Criar conta</button>
-        </div>
-        <button class="text-btn text-btn--strong" id="btn-close-auth">OK</button>
+        <h3 id="auth-title">Entrar</h3>
+        <button class="text-btn text-btn--strong" id="btn-close-auth">Fechar</button>
       </div>
       <div class="modal-body">
-        <div id="google-signin" class="google-signin hidden"></div>
-        <form id="form-auth">
-          <div class="group">
-            <div class="group-body">
-              <label id="field-band-name" class="row hidden">
-                <input type="text" id="auth-band-name" maxlength="60" placeholder="Nome da banda" class="row-input row-input--full">
-              </label>
-              <label class="row">
-                <input type="email" id="auth-email" placeholder="E-mail" required autocomplete="email" class="row-input row-input--full">
-              </label>
-              <label class="row">
-                <input type="password" id="auth-password" placeholder="Senha (mínimo 6 caracteres)" required minlength="6" autocomplete="current-password" class="row-input row-input--full">
-              </label>
+        <div id="auth-guest">
+          <div id="google-signin" class="google-signin hidden"></div>
+          <button type="button" id="btn-auth-email-toggle" class="text-btn auth-email-toggle hidden">Usar e-mail e senha</button>
+          <form id="form-auth">
+            <div class="segmented segmented--sm auth-tabs">
+              <button type="button" id="tab-auth-login" class="active">Entrar</button>
+              <button type="button" id="tab-auth-register">Criar conta</button>
             </div>
-            <div class="group-footer">Com a conta, seus repertórios ficam salvos e aparecem em qualquer aparelho.</div>
-          </div>
-          <div id="auth-error" class="auth-error-msg hidden" role="alert"></div>
-          <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-lg full-width">Entrar</button>
-        </form>
+            <div class="group">
+              <div class="group-body">
+                <label id="field-band-name" class="row hidden">
+                  <input type="text" id="auth-band-name" maxlength="60" placeholder="Nome da banda" class="row-input row-input--full">
+                </label>
+                <label class="row">
+                  <input type="email" id="auth-email" placeholder="E-mail" required autocomplete="email" class="row-input row-input--full">
+                </label>
+                <label class="row">
+                  <input type="password" id="auth-password" placeholder="Senha" required minlength="6" autocomplete="current-password" class="row-input row-input--full">
+                </label>
+              </div>
+            </div>
+            <div id="auth-error" class="auth-error-msg hidden" role="alert"></div>
+            <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-lg full-width">Entrar</button>
+          </form>
+        </div>
         <div id="auth-user-logged" class="auth-logged-box hidden">
+          <div id="auth-avatar" class="avatar" aria-hidden="true"></div>
           <p><strong id="logged-user-name"></strong></p>
           <p class="text-muted" id="logged-band-name"></p>
           <p class="text-muted sync-status" id="sync-status"></p>

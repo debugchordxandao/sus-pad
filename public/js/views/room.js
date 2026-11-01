@@ -3,10 +3,10 @@ import { connect, disconnect, send, onMessage, setRejoin } from '../net.js';
 import { commit, dispatch, runCommand, applyRemoteState, broadcastNow, COMMANDS } from '../actions.js';
 import { $, el, toast, showBanner, hideBanner, openModal, closeModal } from '../ui.js';
 import { ROLES, CAPABILITIES, normalizePermissions, defaultPermissions } from '../permissions.js';
-import { PadStudioAudioEngine } from '../audio-engine.js';
+import { SusPadAudioEngine } from '../audio-engine.js';
 import { startKeepAwake, stopKeepAwake } from '../wake.js';
 
-const HOST_SESSION_KEY = 'padstudio_host_session';
+const HOST_SESSION_KEY = 'suspad_host_session';
 const HOST_SESSION_MAX_AGE = 12 * 60 * 60 * 1000;
 const ROLE_NAMES = { host: 'Mesa', keyboardist: 'Tecladista', drummer: 'Baterista', leader: 'Host' };
 
@@ -19,7 +19,7 @@ let restoreState = null;   // estado salvo na sala, aplicado quando o host volta
 
 async function getEngine() {
   if (!store.engine) {
-    const engine = new PadStudioAudioEngine();
+    const engine = new SusPadAudioEngine();
     engine.onChange = () => commit();
     engine.onError = (message) => toast(message, 'error');
     engine.onBeat = (beat, accent) => emit('beat', { beat, accent });
@@ -266,8 +266,8 @@ function enterRoom(msg) {
   store.permissions = normalizePermissions(msg.permissions);
   $('modal-lbl-code').textContent = msg.roomCode;
   try {
-    sessionStorage.setItem('padstudio_room_code', msg.roomCode);
-    sessionStorage.setItem('padstudio_role', store.role);
+    sessionStorage.setItem('suspad_room_code', msg.roomCode);
+    sessionStorage.setItem('suspad_role', store.role);
   } catch (e) { /* ignore */ }
   hideBanner();
   loadQrCode(msg.roomCode);
@@ -376,8 +376,8 @@ export function initRoom() {
   // ?room=K7QF (QR Code) ou a última sala desta aba
   const params = new URLSearchParams(location.search);
   const fromUrl = params.get('room');
-  const saved = (() => { try { return sessionStorage.getItem('padstudio_room_code'); } catch (e) { return null; } })();
-  const savedRole = (() => { try { return sessionStorage.getItem('padstudio_role'); } catch (e) { return null; } })();
+  const saved = (() => { try { return sessionStorage.getItem('suspad_room_code'); } catch (e) { return null; } })();
+  const savedRole = (() => { try { return sessionStorage.getItem('suspad_role'); } catch (e) { return null; } })();
   if (fromUrl) $('input-gateway-code').value = fromUrl.toUpperCase().slice(0, 4);
   else if (saved && savedRole !== 'host') $('input-gateway-code').value = saved;
   if (savedRole && ['keyboardist', 'drummer', 'leader'].includes(savedRole)) $('select-gateway-role').value = savedRole;

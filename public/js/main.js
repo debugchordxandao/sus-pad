@@ -15,6 +15,7 @@
  *   views/*.js      telas (cada uma escuta o evento 'view' e se atualiza)
  */
 
+import './migrate.js'; // primeiro: traz os dados dos nomes antigos
 import { initUi } from './ui.js';
 import { initPads } from './views/pads.js';
 import { initDrums } from './views/drums.js';

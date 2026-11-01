@@ -21,7 +21,7 @@ function freePort() {
 
 async function startServer(extraEnv = {}) {
   const port = await freePort();
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'padstudio-test-'));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'suspad-test-'));
   const child = spawn(process.execPath, [path.join(__dirname, '..', 'server', 'server.js')], {
     env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, NODE_ENV: 'test', JWT_SECRET: 'segredo-de-teste-com-mais-de-32-caracteres', ...extraEnv },
     stdio: ['ignore', 'pipe', 'pipe']

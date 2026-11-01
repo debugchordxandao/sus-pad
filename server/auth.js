@@ -36,7 +36,8 @@ function generateToken(user) {
       id: user.id,
       email: user.email,
       name: user.name,
-      bandName: user.bandName || user.name
+      bandName: user.bandName || user.name,
+      ...(user.picture ? { picture: user.picture } : {})
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }

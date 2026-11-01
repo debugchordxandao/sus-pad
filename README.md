@@ -49,7 +49,7 @@ Sem HTTPS o app funciona normalmente. Para a tela não apagar, ele usa um vídeo
 ## Qualidade
 
 ```bash
-npm test           # 43 testes: servidor real + WebSocket, segurança, repertórios, leitura de listas, cifras e transposição, permissões, catálogo de áudio
+npm test           # 44 testes: servidor real + WebSocket, segurança, repertórios, leitura de listas, cifras e transposição, permissões, catálogo de áudio
 npm run lint       # ESLint
 npm run check      # os dois
 ```
@@ -79,7 +79,7 @@ O servidor precisa de um processo Node contínuo, por causa dos WebSockets e do 
 
 Quem entra pelo Google e quem usa e-mail e senha com o mesmo e-mail caem na mesma conta.
 
-Se o front-end ficar em outro domínio, defina `window.PADSTUDIO_WS_URL = "wss://seu-servico"` antes de carregar `js/main.js`.
+Se o front-end ficar em outro domínio, defina `window.SUSPAD_WS_URL = "wss://seu-servico"` antes de carregar `js/main.js`.
 
 ## Estrutura
 

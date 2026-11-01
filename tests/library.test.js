@@ -15,7 +15,7 @@ const SAMPLE_SONGS = [
   { id: '3', title: 'Música 3', keyIndex: 5, bpm: 70, timeSig: '6/8', preset: 'pad_shimmer' },
   { id: '4', title: 'Música 4', keyIndex: 7, bpm: 140, timeSig: '4/4', preset: 'abba_pad' }
 ];
-const seededStorage = () => memoryStorage({ padstudio_library: JSON.stringify({ lists: [{ id: 'l1', name: 'Repertório', songs: SAMPLE_SONGS }], activeListId: 'l1' }) });
+const seededStorage = () => memoryStorage({ suspad_library: JSON.stringify({ lists: [{ id: 'l1', name: 'Repertório', songs: SAMPLE_SONGS }], activeListId: 'l1' }) });
 
 test('normalizeSong limpa e limita tudo que vem de fora', async () => {
   const { normalizeSong } = await load('library.js');

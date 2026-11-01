@@ -12,7 +12,14 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const DB_FILE = path.join(DATA_DIR, 'padstudio.db');
+const DB_FILE = path.join(DATA_DIR, 'suspad.db');
+// Banco criado com o nome antigo: renomeia (junto com os arquivos do WAL) antes de abrir
+const OLD_DB_FILE = path.join(DATA_DIR, 'padstudio.db');
+if (!fs.existsSync(DB_FILE) && fs.existsSync(OLD_DB_FILE)) {
+  for (const suffix of ['', '-wal', '-shm']) {
+    if (fs.existsSync(OLD_DB_FILE + suffix)) fs.renameSync(OLD_DB_FILE + suffix, DB_FILE + suffix);
+  }
+}
 const db = new Database(DB_FILE);
 
 // Enable WAL mode for high concurrency & reliability

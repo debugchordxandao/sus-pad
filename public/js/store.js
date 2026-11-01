@@ -10,7 +10,7 @@ import { Library } from './library.js';
 import { defaultPermissions, can } from './permissions.js';
 import { DEFAULT_PRESET, DEFAULT_KIT, DEFAULT_CLICK } from './catalog.js';
 
-const PREFS_KEY = 'padstudio_prefs';
+const PREFS_KEY = 'suspad_prefs';
 
 function loadPrefs() {
   const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '', chartSize: 15, chartSimple: false, chartSpeed: 3 };

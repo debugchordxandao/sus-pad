@@ -2,12 +2,12 @@
  * Sus Pad — Service Worker
  * - App (HTML/JS/CSS): rede primeiro, cópia salva quando offline
  * - Ícones e vídeo: cache primeiro
- * - Áudio: fica a cargo do motor de áudio (cache 'padstudio-audio-*'), que este SW nunca apaga
+ * - Áudio: fica a cargo do motor de áudio (caches 'suspad-audio-*' e 'padstudio-audio-*'), que este SW nunca apaga
  */
 
-const SHELL_CACHE = 'padstudio-shell-v9';
-const SHELL_PREFIX = 'padstudio-shell-';
-const LEGACY_PREFIX = 'padstudio-live-';
+const SHELL_CACHE = 'suspad-shell-v1';
+const SHELL_PREFIX = 'suspad-shell-';
+const LEGACY_PREFIXES = ['padstudio-shell-', 'padstudio-live-'];
 
 const SHELL = [
   '/',
@@ -21,6 +21,7 @@ const SHELL = [
   '/js/actions.js',
   '/js/audio-engine.js',
   '/js/catalog.js',
+  '/js/migrate.js',
   '/js/chords.js',
   '/js/library.js',
   '/js/midi.js',
@@ -55,7 +56,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys
-        .filter(k => (k.startsWith(SHELL_PREFIX) && k !== SHELL_CACHE) || k.startsWith(LEGACY_PREFIX))
+        .filter(k => (k.startsWith(SHELL_PREFIX) && k !== SHELL_CACHE) || LEGACY_PREFIXES.some(p => k.startsWith(p)))
         .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
