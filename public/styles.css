@@ -1147,3 +1147,31 @@ body:has(#tab-chart.active) #btn-song-chart { display: none; }
   .nav-segment { padding-left: 8px; padding-right: 8px; }
   #chart-title { display: none; }
 }
+
+/* ---- Ferramentas da cifra ---- */
+.chart-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chart-tools.hidden { display: none; }
+.stepper { display: inline-flex; align-items: center; height: 34px; border-radius: 17px; background: var(--fill); overflow: hidden; }
+.stepper button { min-width: 36px; height: 100%; border: 0; background: transparent; color: var(--tint); font: inherit; font-size: 18px; cursor: pointer; }
+.stepper button:active { background: var(--fill-2); }
+.stepper span { min-width: 56px; padding: 0 2px; text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
+.stepper.hidden { display: none; }
+.chip { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: var(--fill); color: var(--label); font: inherit; font-size: 15px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--tint); color: #fff; }
+.chart-tone { display: none; }
+#btn-capo-hint { font-size: 15px; }
+
+/* Modo palco: a cifra ocupa a tela toda, com letra grande */
+body.chart-stage { overflow: hidden; }
+body.chart-stage #tab-chart {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  max-width: none;
+  margin: 0;
+  padding: calc(var(--safe-top) + 10px) 16px calc(var(--safe-bottom) + 10px);
+  background: var(--bg);
+}
+body.chart-stage #tab-chart .chart-body { font-size: calc(var(--chart-size, 15px) * 1.2); }
+body.chart-stage .chart-tone { display: inline-flex; }
+body.chart-stage #btn-chart-edit { display: none; }

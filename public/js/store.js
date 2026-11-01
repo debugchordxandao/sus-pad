@@ -13,7 +13,7 @@ import { DEFAULT_PRESET, DEFAULT_KIT, DEFAULT_CLICK } from './catalog.js';
 const PREFS_KEY = 'padstudio_prefs';
 
 function loadPrefs() {
-  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '', chartSize: 15 };
+  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '', chartSize: 15, chartSimple: false, chartSpeed: 3 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') };
   } catch (e) {

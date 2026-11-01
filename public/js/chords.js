@@ -46,16 +46,14 @@ export function formatChord(chord, semitones, flats) {
   return `${root}${chord.quality}${bass}`;
 }
 
+/** Nome do tom como na cifra: "Ab" em tons de bemol, "G#" nos outros. */
+export function keyName(keyIndex, minor = false) {
+  return (flatsFor(keyIndex, minor) ? FLAT : SHARP)[keyIndex];
+}
+
 /** Tons com bemol (F, Sib, Mib...) escrevem F, Bb, Eb; os demais usam sustenidos. */
 export function flatsFor(keyIndex, minor = false) {
   return FLAT_MAJORS.has(minor ? (keyIndex + 3) % 12 : keyIndex);
-}
-
-/** Nome do tom (ex: C, C#, Db, D...). minor = true considera o tom menor. */
-export function keyName(keyIndex, minor = false) {
-  const idx = ((keyIndex % 12) + 12) % 12;
-  const flats = flatsFor(idx, minor);
-  return (flats ? FLAT : SHARP)[idx];
 }
 
 const FILLER = [
@@ -109,7 +107,8 @@ export function classifyLines(text) {
   });
 }
 
-function transposeLine(line, semitones, flats) {
+/** Aplica `fn(chord)` a cada acorde da linha e mantém as colunas alinhadas com a letra. */
+function mapChordLine(line, fn) {
   const parts = line.match(/\s+|\S+/g) || [];
   let first = true;
   for (let i = 0; i < parts.length; i += 1) {
@@ -120,9 +119,9 @@ function transposeLine(line, semitones, flats) {
     if (wasFirst && isLabel(part) && parts.length > 1) continue;
     const found = chordInToken(part);
     if (!found) continue;
-    const next = found.prefix + formatChord(found.chord, semitones, flats) + found.suffix;
+    const next = found.prefix + fn(found.chord) + found.suffix;
     parts[i] = next;
-    // Mantém as colunas: o que o acorde ganha em tamanho sai do espaço seguinte (e vice-versa)
+    // O que o acorde ganha em tamanho sai do espaço seguinte (e vice-versa)
     const diff = next.length - part.length;
     const gap = parts[i + 1];
     if (diff && gap && /^\s+$/.test(gap)) {
@@ -134,11 +133,15 @@ function transposeLine(line, semitones, flats) {
   return parts.join('');
 }
 
+function mapChords(text, fn) {
+  return String(text || '').split('\n').map(line => (isChordLine(line) ? mapChordLine(line, fn) : line)).join('\n');
+}
+
 /** Transpõe todos os acordes do texto. `flats` escolhe bemóis (Bb) ou sustenidos (A#). */
 export function transposeChart(text, semitones, flats = false) {
   const shift = ((semitones % 12) + 12) % 12;
   if (!shift) return String(text || '');
-  return String(text || '').split('\n').map(line => (isChordLine(line) ? transposeLine(line, shift, flats) : line)).join('\n');
+  return mapChords(text, chord => formatChord(chord, shift, flats));
 }
 
 /** Tom da cifra: "Tom: G" no cabeçalho ou, se não houver, o primeiro acorde. */
@@ -157,6 +160,80 @@ export function detectKey(text) {
   return null;
 }
 
+const isMinor = (chord) => /^(m(?!aj)|min|dim)/.test(chord.quality);
+
+/** Cifra simplificada: só tríades (G, Am), sem 7, 9, sus nem baixo invertido. */
+export function simplifyChart(text, flats = false) {
+  return mapChords(text, chord => formatChord({ root: chord.root, quality: isMinor(chord) ? 'm' : '', bass: null }, 0, flats));
+}
+
+function chordsOf(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    if (/^\s*tom\s*:/i.test(line) || !isChordLine(line)) continue;
+    for (const token of line.trim().split(/\s+/)) {
+      const found = chordInToken(token);
+      if (found) out.push(found.chord);
+    }
+  }
+  return out;
+}
+
+// Formas "de corda solta" mais fáceis: C D E G A, Am Em Dm
+const OPEN_MAJOR = new Set([0, 2, 4, 7, 9]);
+const OPEN_MINOR = new Set([9, 4, 2]);
+
+/** Qual capotraste deixa a maioria dos acordes em formas abertas (0 = sem capo). */
+export function suggestCapo(text, chartKey, songKey, simple = false) {
+  const shown = chartForKey(text, chartKey, songKey);
+  const chords = chordsOf(simple ? simplifyChart(shown) : shown);
+  if (!chords.length) return 0;
+  let best = 0;
+  let bestScore = -1;
+  for (let capo = 0; capo <= 7; capo += 1) {
+    const score = chords.reduce((n, c) => {
+      const root = (c.root - capo + 120) % 12;
+      return n + ((isMinor(c) ? OPEN_MINOR : OPEN_MAJOR).has(root) ? 1 : 0);
+    }, 0);
+    if (score > bestScore) { best = capo; bestScore = score; }
+  }
+  return best;
+}
+
+/** Cifra pronta para tocar: no tom da música, opcionalmente simplificada e com as formas do capo. */
+export function renderChart(text, chartKey, songKey, { capo = 0, simple = false } = {}) {
+  const minor = !!detectKey(text)?.minor;
+  const flats = flatsFor(songKey, minor);
+  let out = chartForKey(text, chartKey, songKey);
+  if (simple) out = simplifyChart(out, flats);
+  if (capo) {
+    const shapes = transposeChart(out, -capo, flatsFor((songKey - capo + 120) % 12, minor));
+    // O cabeçalho "Tom: G" continua mostrando o tom real da música
+    const real = out.split('\n');
+    out = shapes.split('\n').map((line, i) => (/^\s*tom\s*:/i.test(real[i]) ? real[i] : line)).join('\n');
+  }
+  return out;
+}
+
+/** "[G]Grande é o [D]Senhor" vira a linha de acordes em cima da letra. */
+function convertInline(line) {
+  const parts = line.split(/(\[[^\]\s]+\])/);
+  if (!parts.some(p => /^\[[^\]\s]+\]$/.test(p) && parseChord(p.slice(1, -1)))) return [line];
+  let lyric = '';
+  let chords = '';
+  for (const part of parts) {
+    const m = /^\[([^\]\s]+)\]$/.exec(part);
+    if (m && parseChord(m[1])) {
+      let col = lyric.length;
+      if (chords && chords.length >= col) col = chords.length + 1;
+      chords = chords.padEnd(col, ' ') + m[1];
+    } else {
+      lyric += part;
+    }
+  }
+  return lyric.trim() ? [chords, lyric.replace(/\s+$/, '')] : [chords];
+}
+
 /** Limpa o texto colado: tabs, espaços invisíveis, linhas em branco demais. */
 export function cleanChart(value) {
   return String(value ?? '')
@@ -164,7 +241,7 @@ export function cleanChart(value) {
     .replace(/\t/g, '    ')
     .replace(/[\u00a0\u2007\u202f\u200b\ufeff]/g, ' ')
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
-    .split('\n').map(l => l.replace(/\s+$/, '')).join('\n')
+    .split('\n').map(l => l.replace(/\s+$/, '')).flatMap(convertInline).join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
     .slice(0, MAX_CHART);

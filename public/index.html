@@ -243,6 +243,26 @@
               <button type="button" id="btn-chart-edit" class="text-btn text-btn--strong">Colar cifra</button>
             </div>
           </div>
+          <div id="chart-tools" class="chart-tools hidden">
+            <div class="stepper" role="group" aria-label="Capotraste">
+              <button type="button" id="btn-capo-down" aria-label="Capo mais baixo">−</button>
+              <span id="chart-capo-label">Sem capo</span>
+              <button type="button" id="btn-capo-up" aria-label="Capo mais alto">+</button>
+            </div>
+            <button type="button" id="btn-capo-hint" class="text-btn hidden"></button>
+            <button type="button" id="btn-chart-simple" class="chip" aria-pressed="false">Simples</button>
+            <button type="button" id="btn-chart-scroll" class="chip" aria-pressed="false">Rolar</button>
+            <div class="stepper hidden" id="chart-speed" role="group" aria-label="Velocidade da rolagem">
+              <button type="button" id="btn-speed-down" aria-label="Mais devagar">−</button>
+              <span id="chart-speed-label">3</span>
+              <button type="button" id="btn-speed-up" aria-label="Mais rápido">+</button>
+            </div>
+            <div class="stepper chart-tone" role="group" aria-label="Mudar o tom">
+              <button type="button" id="btn-chart-down" title="Descer meio tom">−½</button>
+              <button type="button" id="btn-chart-up" title="Subir meio tom">+½</button>
+            </div>
+            <button type="button" id="btn-chart-stage" class="chip">Palco</button>
+          </div>
           <form id="chart-editor" class="chart-editor hidden" autocomplete="off">
             <div class="group">
               <div class="group-body">
@@ -254,6 +274,9 @@
                 </label>
               </div>
               <p class="group-footer" id="chart-hint"></p>
+            </div>
+            <div class="chart-editor-actions">
+              <button type="button" id="btn-chart-clipboard" class="btn btn-secondary">Colar do clipboard</button>
             </div>
             <div class="chart-editor-actions">
               <button type="button" id="btn-chart-cancel" class="btn btn-secondary">Cancelar</button>

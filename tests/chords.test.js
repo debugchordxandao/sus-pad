@@ -95,3 +95,30 @@ test('nome do tom segue a cifra: bemol em tons de bemol', async () => {
   assert.equal(keyName(6), 'F#');
   assert.equal(keyName(2, true), 'D'); // Ré menor usa o bemol de Sib na armadura, mas o nome do tom é D
 });
+
+test('cifra com acordes na mesma linha da letra vira acordes em cima', async () => {
+  const { cleanChart } = await load();
+  assert.equal(cleanChart('[G]Grande é o [D/F#]Senhor'), 'G' + ' '.repeat(10) + 'D/F#\nGrande é o Senhor');
+  assert.equal(cleanChart('[Intro]\n[Em] [C]'), '[Intro]\nEm C');
+  assert.equal(cleanChart(cleanChart('[G]Oi [C]você')), cleanChart('[G]Oi [C]você')); // repetir não muda
+});
+
+test('cifra simplificada tira 7, 9, sus e baixo, e mantém o alinhamento', async () => {
+  const { simplifyChart } = await load();
+  const out = simplifyChart('G7M  Am7(9)  D/F#  Csus4  Bdim\nLetra');
+  assert.equal(out, 'G    Am      D     C      Bm\nLetra');
+  // cada acorde continua na mesma coluna de antes
+  for (const [chord, was] of [['Am', 'Am7(9)'], ['D', 'D/F#'], ['C', 'Csus4'], ['Bm', 'Bdim']]) {
+    assert.equal(out.indexOf(chord), 'G7M  Am7(9)  D/F#  Csus4  Bdim'.indexOf(was));
+  }
+});
+
+test('capo mostra as formas e sugere o capo que abre os acordes', async () => {
+  const { renderChart, suggestCapo } = await load();
+  // Ab (tom 8): com capo 4 as formas são em F... com capo 1 as formas são em G
+  assert.equal(renderChart('Ab  Db  Eb  Fm', 8, 8, { capo: 1 }), 'G   C   D   Em');
+  assert.equal(renderChart('Tom: Ab\nAb  Db', 8, 8, { capo: 1 }), 'Tom: Ab\nG   C');
+  assert.equal(suggestCapo('Ab  Db  Eb  Fm', 8, 8), 1);
+  assert.equal(suggestCapo('G  C  D  Em', 7, 7), 0);
+  assert.equal(renderChart('G  C  D', 7, 9, { capo: 2 }), 'G  C  D'); // A com capo 2 = formas em G
+});
