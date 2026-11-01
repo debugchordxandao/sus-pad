@@ -128,6 +128,7 @@
             <button id="btn-transpose-down" title="Descer meio tom">−½</button>
             <button id="btn-transpose-up" title="Subir meio tom">+½</button>
           </div>
+          <button id="btn-song-chart" class="btn btn-secondary btn-sm hidden">Cifra</button>
           <button id="btn-song-next" class="btn btn-primary btn-sm">Próxima</button>
         </div>
       </div>
@@ -414,9 +415,43 @@
             </label>
           </div>
         </div>
+        <div class="group" id="song-chart-group">
+          <div class="group-body">
+            <label class="row row--stack">
+              <textarea id="song-chart" maxlength="8000" rows="6" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Cifra: cole aqui do Cifra Club ou de outro site" class="row-textarea row-textarea--mono"></textarea>
+            </label>
+            <label class="row" id="song-chart-key-row">
+              <span class="row-label">Tom da cifra</span>
+              <select id="song-chart-key" class="row-input row-select"></select>
+            </label>
+          </div>
+          <p class="group-footer" id="song-chart-hint"></p>
+        </div>
         <button type="button" id="btn-song-delete" class="btn btn-destructive full-width hidden">Excluir música</button>
       </div>
     </form>
+  </div>
+
+  <!-- SHEET: CIFRA -->
+  <div id="modal-chart" class="modal-backdrop hidden">
+    <div class="modal-card modal-card--chart" role="dialog" aria-modal="true" aria-labelledby="chart-title">
+      <div class="modal-header">
+        <button type="button" class="text-btn" id="btn-close-chart">Fechar</button>
+        <h3 id="chart-title">Cifra</h3>
+        <div class="chart-size" role="group" aria-label="Tamanho da letra">
+          <button type="button" id="btn-chart-smaller" aria-label="Diminuir letra">A−</button>
+          <button type="button" id="btn-chart-bigger" aria-label="Aumentar letra">A+</button>
+        </div>
+      </div>
+      <div id="chart-body" class="chart-body" tabindex="0"></div>
+      <div class="chart-bar">
+        <div class="segmented segmented--sm" role="group" aria-label="Mudar o tom">
+          <button id="btn-chart-down" title="Descer meio tom">−½</button>
+          <button id="btn-chart-up" title="Subir meio tom">+½</button>
+        </div>
+        <span id="chart-key" class="chart-key"></span>
+      </div>
+    </div>
   </div>
 
   <!-- SHEET: REPERTÓRIO -->

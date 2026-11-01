@@ -72,3 +72,20 @@ test('salva no armazenamento e marca a data da alteração', async () => {
   assert.equal(saved.lists[0].songs[0].bpm, 77);
   assert.ok(saved.updatedAt > 0);
 });
+
+test('cifra: guarda o texto e o tom, limpa a colagem e sobrevive a edições parciais', async () => {
+  const { normalizeSong, Library } = await load('library.js');
+  const song = normalizeSong({ title: 'X', keyIndex: 7, chart: 'G\tD  \r\nEm C', chartKey: 7 });
+  assert.equal(song.chart, 'G    D\nEm C');
+  assert.equal(song.chartKey, 7);
+  assert.equal(normalizeSong({ title: 'Y', keyIndex: 4 }).chart, '');
+  assert.equal(normalizeSong({ title: 'Y', keyIndex: 4, chart: 'C' }).chartKey, 4); // sem tom informado, vale o da música
+
+  const lib = new Library(memoryStorage());
+  const added = lib.addSong({ title: 'Z', keyIndex: 0, chart: 'C  G', chartKey: 0 });
+  lib.updateSong(added.id, { title: 'Z2', keyIndex: 2 }); // edição que não manda a cifra não a apaga
+  const saved = lib.getSong(added.id);
+  assert.equal(saved.chart, 'C  G');
+  assert.equal(saved.chartKey, 0);
+  assert.equal(saved.keyIndex, 2);
+});

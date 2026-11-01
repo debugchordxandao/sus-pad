@@ -13,7 +13,7 @@ import { DEFAULT_PRESET, DEFAULT_KIT, DEFAULT_CLICK } from './catalog.js';
 const PREFS_KEY = 'padstudio_prefs';
 
 function loadPrefs() {
-  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '' };
+  const defaults = { notation: 'cifra', accidental: 'sharp', midi: false, name: '', chartSize: 15 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') };
   } catch (e) {
@@ -39,6 +39,7 @@ export function defaultView() {
     padFade: 1,
     volumes: { pad: 90, drums: 85, metro: 80, master: 90 },
     activeSongId: null,
+    activeChart: null,
     songs: [],
     lists: [],
     activeListId: null

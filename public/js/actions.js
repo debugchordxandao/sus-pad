@@ -14,6 +14,11 @@ import { toast } from './ui.js';
 const lib = () => store.library;
 const engine = () => store.engine;
 
+function activeChartOf(l) {
+  const song = l.getSong(l.activeSongId);
+  return song && song.chart ? { songId: song.id, text: song.chart, key: song.chartKey } : null;
+}
+
 /** Estado visível da sala, montado a partir do motor e da biblioteca (host/solo). */
 export function buildView() {
   const e = engine();
@@ -37,7 +42,9 @@ export function buildView() {
     padFade: e.padFade,
     volumes: { ...e.volumes },
     activeSongId: l.activeSongId,
-    songs: l.songs,
+    // A cifra é pesada: a lista só diz se existe (hasChart) e o texto vai só da música ativa
+    activeChart: activeChartOf(l),
+    songs: l.songs.map(({ chart, chartKey, ...song }) => ({ ...song, hasChart: !!chart })),
     lists: l.lists.map(x => ({ id: x.id, name: x.name })),
     activeListId: l.list.id
   };
@@ -176,11 +183,20 @@ function scheduleBroadcast() {
   }
 }
 
+// A sala guarda o último estado enviado, então a cifra só vai de novo quando muda
+let chartSent = '';
+
 export function broadcastNow() {
   clearTimeout(broadcastTimer);
   broadcastTimer = null;
   lastBroadcast = Date.now();
-  send({ type: 'host_state_update', state: store.view });
+  const { activeChart, ...state } = store.view;
+  const signature = `${store.roomCode}|${activeChart ? `${activeChart.songId}|${activeChart.key}|${activeChart.text}` : ''}`;
+  if (signature !== chartSent) {
+    state.activeChart = activeChart;
+    chartSent = signature;
+  }
+  send({ type: 'host_state_update', state });
 }
 
 /** Controle remoto: aplica o estado enviado pelo host. */

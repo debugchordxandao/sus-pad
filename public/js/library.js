@@ -6,6 +6,7 @@
  */
 
 import { PRESET_IDS, DEFAULT_PRESET, TIME_SIGNATURES } from './catalog.js';
+import { cleanChart } from './chords.js';
 
 export const STORAGE_KEY = 'padstudio_library';
 const LEGACY_KEY = 'padstudio_setlist';
@@ -25,14 +26,18 @@ function cleanText(value, max) {
 
 export function normalizeSong(input, base = {}) {
   const src = { ...base, ...(input && typeof input === 'object' ? input : {}) };
+  const keyIndex = clampInt(src.keyIndex, 0, 11, 0);
   return {
     id: cleanText(src.id, 40) || newId(),
     title: cleanText(src.title, 80) || 'Nova música',
-    keyIndex: clampInt(src.keyIndex, 0, 11, 0),
+    keyIndex,
     bpm: clampInt(src.bpm, 30, 300, 120),
     timeSig: TIME_SIGNATURES.includes(src.timeSig) ? src.timeSig : '4/4',
     preset: PRESET_IDS.includes(src.preset) ? src.preset : DEFAULT_PRESET,
-    notes: cleanText(src.notes, 140)
+    notes: cleanText(src.notes, 140),
+    // Cifra colada (texto) e o tom em que ela foi escrita; a tela transpõe para o tom da música
+    chart: cleanChart(src.chart),
+    chartKey: clampInt(src.chartKey, 0, 11, keyIndex)
   };
 }
 

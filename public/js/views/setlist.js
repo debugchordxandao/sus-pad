@@ -4,6 +4,7 @@ import { $, el, labels, fillSelect, openModal, closeModal, confirmButton, toast 
 import { PAD_PRESETS, TIME_SIGNATURES } from '../catalog.js';
 import { normalizeSong } from '../library.js';
 import { parseSetlistText, formatSetlistText } from '../setlist-text.js';
+import { detectKey } from '../chords.js';
 
 const NEW_LIST = '__new';
 const EDIT_LIST = '__edit';
@@ -232,6 +233,21 @@ function initImport() {
 
 let editingSongId = null;
 let resetDelete = () => {};
+let keyTouched = false;
+let chartKeyTouched = false;
+
+/** Mostra o tom detectado na cifra colada e ajusta os campos que o usuário ainda não mexeu. */
+function onChartInput() {
+  const text = $('song-chart').value;
+  const found = text.trim() ? detectKey(text) : null;
+  $('song-chart-key-row').classList.toggle('hidden', !text.trim());
+  $('song-chart-hint').textContent = !text.trim() ? ''
+    : found ? `Tom detectado na cifra: ${labels()[found.key]}${found.minor ? ' menor' : ''}. A cifra acompanha o tom da música.`
+      : 'Não achei acordes. Confira se colou a cifra com os acordes.';
+  if (!found) return;
+  if (!chartKeyTouched) $('song-chart-key').value = String(found.key);
+  if (!editingSongId && !keyTouched) $('song-key').value = String(found.key);
+}
 
 export function openSongEditor(song) {
   editingSongId = song ? song.id : null;
@@ -243,6 +259,17 @@ export function openSongEditor(song) {
   $('song-timesig').value = song ? song.timeSig : store.view.timeSig;
   $('song-preset').value = song ? song.preset : store.view.padPreset;
   $('song-notes').value = song ? song.notes || '' : '';
+
+  // A cifra fica no host/solo; os controles remotos só a veem (tela Cifra)
+  const local = isLocal();
+  const stored = song && local ? store.library.getSong(song.id) : null;
+  $('song-chart-group').classList.toggle('hidden', !local);
+  fillSelect($('song-chart-key'), labels().map((name, i) => ({ id: String(i), name })), String(stored?.chart ? stored.chartKey : (song ? song.keyIndex : (store.view.activeToneIndex ?? 0))));
+  $('song-chart').value = stored?.chart || '';
+  keyTouched = false;
+  chartKeyTouched = !!stored?.chart;
+  onChartInput();
+  if (stored?.chart) $('song-chart-hint').textContent = '';
   $('btn-song-delete').classList.toggle('hidden', !song);
   openModal($('modal-song'));
   if (!song) setTimeout(() => $('song-title').focus(), 60);
@@ -260,8 +287,11 @@ function initEditor() {
       bpm: $('song-bpm').value,
       timeSig: $('song-timesig').value,
       preset: $('song-preset').value,
-      notes: $('song-notes').value
+      notes: $('song-notes').value,
+      chart: $('song-chart').value,
+      chartKey: $('song-chart-key').value
     });
+    if (!isLocal()) { delete data.chart; delete data.chartKey; } // o texto da cifra só muda no host
     if (editingSongId) dispatch('setlist_edit', { songId: editingSongId, updates: data });
     else dispatch('setlist_add', { song: data });
     closeModal($('modal-song'));
@@ -272,6 +302,9 @@ function initEditor() {
     closeModal($('modal-song'));
   });
 
+  $('song-chart').addEventListener('input', onChartInput);
+  $('song-key').addEventListener('change', () => { keyTouched = true; });
+  $('song-chart-key').addEventListener('change', () => { chartKeyTouched = true; });
   $('btn-close-song').addEventListener('click', () => closeModal($('modal-song')));
   $('btn-add-song').addEventListener('click', () => openSongEditor(null));
   $('btn-setlist-edit').addEventListener('click', () => { editing = !editing; renderList(true); });

@@ -16,7 +16,7 @@ const {
 const db = require('./db');
 const { getClientIp, pinLimiter, roomLookupLimiter, authLimiter } = require('./rate-limit');
 
-const MAX_LIBRARY_BYTES = 200 * 1024;
+const MAX_LIBRARY_BYTES = 1536 * 1024;
 const { createRoom, getRoom } = require('./rooms');
 
 const router = express.Router();

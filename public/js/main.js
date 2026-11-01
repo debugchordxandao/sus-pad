@@ -9,6 +9,7 @@
  *   store.js        estado + eventos
  *   net.js          WebSocket da sala
  *   setlist-text.js colar/compartilhar repertório em texto
+ *   chords.js       cifras: reconhecer acordes e transpor
  *   shortcuts.js    atalhos do teclado do computador
  *   actions.js      toda ação passa por dispatch()
  *   views/*.js      telas (cada uma escuta o evento 'view' e se atualiza)
@@ -24,6 +25,7 @@ import { initRoom } from './views/room.js';
 import { initAuth } from './views/auth.js';
 import { initSettings } from './views/settings.js';
 import { initCues } from './views/cues.js';
+import { initChart } from './views/chart.js';
 import { initShortcuts } from './shortcuts.js';
 
 initUi();
@@ -36,6 +38,7 @@ initRoom();
 initAuth();
 initSettings();
 initCues();
+initChart();
 initShortcuts();
 
 if ('serviceWorker' in navigator) {
