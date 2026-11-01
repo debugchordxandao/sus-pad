@@ -51,6 +51,13 @@ export function flatsFor(keyIndex, minor = false) {
   return FLAT_MAJORS.has(minor ? (keyIndex + 3) % 12 : keyIndex);
 }
 
+/** Nome do tom (ex: C, C#, Db, D...). minor = true considera o tom menor. */
+export function keyName(keyIndex, minor = false) {
+  const idx = ((keyIndex % 12) + 12) % 12;
+  const flats = flatsFor(idx, minor);
+  return (flats ? FLAT : SHARP)[idx];
+}
+
 const FILLER = [
   /^[|\-–—/\\.~%*()>:]+$/,
   /^\(?(?:x\d+|\d+x)\)?$/i,
