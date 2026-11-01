@@ -126,6 +126,13 @@ export const COMMANDS = Object.keys(executors);
 
 /** Atualização otimista no controle remoto, para a tela responder antes do eco do host. */
 const optimistic = {
+  pad_on: ({ toneIndex }) => ({ activeToneIndex: toneIndex }),
+  pad_off: () => ({ activeToneIndex: null }),
+  song_activate: ({ songId, silent }) => {
+    const song = store.view.songs.find(x => x.id === songId);
+    if (!song) return {};
+    return silent ? { activeSongId: songId } : { activeSongId: songId, activeToneIndex: song.keyIndex, bpm: song.bpm, timeSig: song.timeSig };
+  },
   pad_preset: ({ preset }) => ({ padPreset: preset }),
   drum_kit: ({ kitId }) => ({ drumKit: kitId }),
   bpm: ({ value }) => ({ bpm: value }),
@@ -171,7 +178,7 @@ export function runCommand(type, payload = {}) {
 // Estado: host/solo → telas e sala
 // ---------------------------------------------------------------------------
 
-const BROADCAST_INTERVAL_MS = 50;
+const BROADCAST_INTERVAL_MS = 30;
 let lastBroadcast = 0;
 let broadcastTimer = null;
 
@@ -182,7 +189,7 @@ export function commit() {
   if (store.role === 'host') scheduleBroadcast();
 }
 
-/** Envia o estado à sala no máximo a cada 50 ms (arrastar um fader não inunda a rede). */
+/** Envia o estado à sala no máximo a cada 30 ms (arrastar um fader não inunda a rede). */
 function scheduleBroadcast() {
   const wait = BROADCAST_INTERVAL_MS - (Date.now() - lastBroadcast);
   if (wait <= 0) {

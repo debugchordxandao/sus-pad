@@ -190,10 +190,19 @@ export class SusPadAudioEngine {
     return this.loopConfig;
   }
 
-  preload() {
-    padUrls(this.padPreset).forEach(u => this.loadPad(u));
-    getKit(this.drumKit).pads.forEach(p => this.getBuffer(drumUrl(p)));
-    Object.values(clickUrls(this.clickSound)).forEach(u => this.getBuffer(u));
+  /** Arquivos pequenos (bateria, click) primeiro; os 12 pads depois, poucos por vez, para o primeiro toque não competir por rede e decodificação. */
+  async preload() {
+    const small = [
+      ...getKit(this.drumKit).pads.map(p => drumUrl(p)),
+      ...Object.values(clickUrls(this.clickSound))
+    ];
+    await Promise.all(small.map(u => this.getBuffer(u)));
+    const preset = this.padPreset;
+    const queue = padUrls(preset).slice();
+    const worker = async () => {
+      while (queue.length && this.padPreset === preset) await this.loadPad(queue.shift());
+    };
+    await Promise.all([worker(), worker(), worker()]);
   }
 
   getBuffer(url) {
