@@ -7,7 +7,7 @@
 
 import { store, on, savePrefs, isLocal } from '../store.js';
 import { dispatch } from '../actions.js';
-import { $, el, labels, toast } from '../ui.js';
+import { $, el, labels, toast, fillSelect } from '../ui.js';
 import { classifyLines, renderChart, detectKey, keyName, cleanChart, isChordLine, suggestCapo } from '../chords.js';
 
 const MIN_SIZE = 11;
@@ -108,6 +108,17 @@ function renderTools() {
   $('chart-speed-label').textContent = String(store.prefs.chartSpeed);
   $('btn-chart-stage').textContent = stage ? 'Sair do palco' : 'Palco';
 
+  const minor = !!detectKey(chart.text)?.minor;
+  const optionsSig = `${minor}|${store.prefs.notation}|${store.prefs.accidental}`;
+  const pick = $('chart-key-select');
+  if (pick.dataset.sig !== optionsSig) { // só refaz a lista quando muda; assim não fecha o seletor aberto
+    fillSelect(pick, Array.from({ length: 12 }, (_, i) => ({ id: String(i), name: keyLabel(i, minor) })));
+    pick.dataset.sig = optionsSig;
+  }
+  pick.value = String(song.keyIndex);
+  $('btn-chart-original').classList.toggle('hidden', song.keyIndex === chart.key);
+  $('btn-chart-original').textContent = `Tom original (${keyLabel(chart.key, minor)})`;
+
   const suggested = suggestCapo(chart.text, chart.key, song.keyIndex, simple);
   const hint = $('btn-capo-hint');
   hint.classList.toggle('hidden', !suggested || suggested === capo);
@@ -200,8 +211,14 @@ function save(e) {
   const found = detectKey(text);
   const song = activeSong();
   if (song) {
+    const hadChart = !!store.library.getSong(song.id)?.chart;
     dispatch('setlist_edit', { songId: song.id, updates: { chart: text, chartKey: found ? found.key : song.keyIndex } });
-    toast(text ? 'Cifra salva' : 'Cifra removida', 'success');
+    if (text && found && !hadChart && found.key !== song.keyIndex) {
+      dispatch('transpose', { toneIndex: found.key }); // primeira cifra: a música passa para o tom dela (e o pad junto)
+      toast(`Cifra salva. Tom da música ajustado para ${keyLabel(found.key, found.minor)}.`, 'success');
+    } else {
+      toast(text ? 'Cifra salva' : 'Cifra removida', 'success');
+    }
   } else {
     if (!text) { toast('Cole a cifra primeiro.', 'error'); return; }
     const key = found ? found.key : 0;
@@ -250,6 +267,11 @@ export function initChart() {
   $('chart-editor').addEventListener('submit', save);
   $('chart-input').addEventListener('input', onInput);
   $('chart-new-title').addEventListener('input', () => { titleTouched = true; });
+  $('chart-key-select').addEventListener('change', (e) => dispatch('transpose', { toneIndex: Number(e.target.value) }));
+  $('btn-chart-original').addEventListener('click', () => {
+    const cur = current();
+    if (cur) dispatch('transpose', { toneIndex: cur.chart.key });
+  });
   $('btn-chart-down').addEventListener('click', () => dispatch('transpose', { delta: -1 }));
   $('btn-chart-up').addEventListener('click', () => dispatch('transpose', { delta: 1 }));
   $('btn-chart-smaller').addEventListener('click', () => savePrefs({ chartSize: Math.max(MIN_SIZE, store.prefs.chartSize - 1) }));

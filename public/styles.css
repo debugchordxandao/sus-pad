@@ -1175,3 +1175,10 @@ body.chart-stage #tab-chart {
 body.chart-stage #tab-chart .chart-body { font-size: calc(var(--chart-size, 15px) * 1.2); }
 body.chart-stage .chart-tone { display: inline-flex; }
 body.chart-stage #btn-chart-edit { display: none; }
+
+.chip--select { display: inline-flex; align-items: center; gap: 6px; position: relative; }
+.chip--select span { color: var(--label-2); }
+.chip--select select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: var(--tint); font: inherit; font-weight: 600; padding: 0 2px; cursor: pointer; }
+.chip--select select:focus-visible { outline: none; }
+body.no-setlist #chart-key-pick, body.no-setlist #btn-chart-original { display: none !important; }
+#btn-chart-original { font-size: 15px; }

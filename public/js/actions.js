@@ -99,11 +99,15 @@ const executors = {
     if (next) activateSong(next);
     else toast('Fim do repertório');
   },
-  transpose: ({ delta }) => {
-    if (delta !== 1 && delta !== -1) return false;
+  // Muda o tom da música ativa: meio tom (delta) ou direto para um tom (toneIndex)
+  transpose: ({ delta, toneIndex }) => {
     const song = lib().getSong(lib().activeSongId);
     if (!song) return false;
-    const key = (song.keyIndex + delta + 12) % 12;
+    let key;
+    if (validTone(toneIndex)) key = toneIndex;
+    else if (delta === 1 || delta === -1) key = (song.keyIndex + delta + 12) % 12;
+    else return false;
+    if (key === song.keyIndex) return false;
     lib().updateSong(song.id, { keyIndex: key });
     if (engine().activeToneIndex !== null) engine().playTone(key);
   },
