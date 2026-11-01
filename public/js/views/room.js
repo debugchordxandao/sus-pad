@@ -74,7 +74,6 @@ function applyRoleUI() {
 
   $('header-room-display').textContent = store.role === 'solo' ? 'Solo' : (store.roomCode || '');
   $('latency-indicator').classList.toggle('hidden', store.role === 'solo');
-  $('host-foreground-banner').classList.toggle('hidden', store.role !== 'host');
   $('btn-panic').classList.toggle('hidden', !allowed('panic'));
 
   const current = document.querySelector('.tab-pane.active')?.id;
