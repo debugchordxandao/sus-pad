@@ -6,7 +6,7 @@
 export const ROLES = [
   { id: 'keyboardist', name: 'Tecladista' },
   { id: 'drummer', name: 'Baterista' },
-  { id: 'leader', name: 'Líder' }
+  { id: 'leader', name: 'Host' }
 ];
 
 export const CAPABILITIES = [

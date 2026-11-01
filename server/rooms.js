@@ -181,8 +181,8 @@ function formatRoleName(role) {
   switch (role) {
     case 'keyboardist': return 'Tecladista';
     case 'drummer': return 'Baterista';
-    case 'leader': return 'Líder de Louvor';
-    case 'host': return 'Saída de Áudio (Host)';
+    case 'leader': return 'Host';
+    case 'host': return 'Mesa de som';
     default: return 'Controle Remoto';
   }
 }

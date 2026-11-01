@@ -17,7 +17,7 @@ Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet l
 | Cifras | Aba **Cifra**: cole a cifra do Cifra Club (ou **Colar do clipboard**, que já salva) e o app tira o título, reconhece os acordes e o tom, e mostra a cifra. Também aceita `[G]Letra` na mesma linha. Sem música ativa, ele cria a música. −½/+½ transpõe cifra e pad juntos. Em cada aparelho: **Capo** (com sugestão de qual deixa os acordes em formas abertas), **Simples** (só tríades), **Rolar** (rolagem automática com velocidade) e **Palco** (tela cheia, letra grande; Esc sai). Todos da sala leem a cifra da música ativa; só o aparelho da mesa cola e edita. |
 | Sinais | Avisos grandes em todos os aparelhos: Repete, Última vez, Segura, Volta ao início, Fim… ou um texto livre. |
 | Mixer | Volume de pads, bateria, click e master, sincronizado com a sala. |
-| Permissões | O host escolhe o que tecladista, baterista e líder podem controlar (tela da sala). Cada músico pode informar o nome ao entrar. |
+| Permissões | O host escolhe o que tecladista, baterista e host remoto podem controlar (tela da sala). Cada músico pode informar o nome ao entrar. |
 | Teclado do computador | 1–0, − e = tocam os 12 tons; Espaço para o pad; → próxima música; Q W E R · A S D F bateria. |
 | MIDI | Em **Ajustes**: qualquer nota toca o pad do mesmo tom e o pedal de sustain avança para a próxima música. Funciona no Chrome e no Edge. |
 | Sem internet | Em **Ajustes**, **Baixar todos os sons** (~85 MB) deixa o app tocando com a internet instável. Requer HTTPS. |

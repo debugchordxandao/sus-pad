@@ -87,9 +87,9 @@ function validateRolePin(room, role, pin) {
 
   // 1. Leader Role Verification
   if (role === 'leader' && room.leaderPin && room.leaderPin.trim() !== '') {
-    if (!pinStr) return { valid: false, message: 'Digite o PIN do líder.' };
+    if (!pinStr) return { valid: false, message: 'Digite o PIN do host.' };
     if (pinStr !== room.leaderPin.trim()) {
-      return { valid: false, message: 'PIN exclusivo de Líder incorreto.' };
+      return { valid: false, message: 'PIN do host incorreto.' };
     }
     return { valid: true };
   }

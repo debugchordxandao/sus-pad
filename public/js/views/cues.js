@@ -1,5 +1,5 @@
 /**
- * Sinais para a banda: o líder toca um aviso e ele aparece grande em todos os aparelhos da sala.
+ * Sinais para a banda: quem tem permissão toca um aviso e ele aparece grande em todos os aparelhos da sala.
  */
 
 import { store, allowed } from '../store.js';

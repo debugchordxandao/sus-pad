@@ -43,35 +43,35 @@
           <div class="group-body">
             <label class="row">
               <span class="row-label">PIN da sala</span>
-              <input type="password" id="input-host-room-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input">
+              <input type="password" id="input-host-room-pin" maxlength="6" inputmode="numeric" class="row-input">
             </label>
             <label class="row">
-              <span class="row-label">PIN do líder</span>
-              <input type="password" id="input-host-leader-pin" maxlength="6" inputmode="numeric" placeholder="Opcional" class="row-input">
+              <span class="row-label">PIN do host</span>
+              <input type="password" id="input-host-leader-pin" maxlength="6" inputmode="numeric" class="row-input">
             </label>
           </div>
-          <div class="group-footer">Este aparelho vira a saída de som na mesa.</div>
           <button id="btn-gateway-create" class="btn btn-primary btn-lg full-width">Criar sala</button>
         </div>
 
         <div class="group">
           <div class="group-header">Entrar em uma sala</div>
-          <input type="text" id="input-gateway-code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input" aria-label="Código da sala">
+          <input type="text" id="input-gateway-code" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" class="code-gateway-input" aria-label="Código da sala">
           <div class="group-body">
             <label class="row">
               <span class="row-label">Seu nome</span>
-              <input type="text" id="input-member-name" maxlength="30" placeholder="Opcional" autocomplete="given-name" class="row-input">
+              <input type="text" id="input-member-name" maxlength="30" autocomplete="given-name" class="row-input">
             </label>
             <label class="row">
               <span class="row-label">Função</span>
               <select id="select-gateway-role" class="row-input row-select">
-                <option value="leader">Líder</option>
+                <option value="leader">Host</option>
                 <option value="keyboardist">Tecladista</option>
                 <option value="drummer">Baterista</option>
               </select>
             </label>
-            <label class="row hidden-row">
-              <input type="password" id="input-join-pin" maxlength="6" inputmode="numeric" placeholder="PIN do líder" class="row-input row-input--full hidden">
+            <label class="row hidden" id="join-pin-row">
+              <span class="row-label" id="join-pin-label">PIN</span>
+              <input type="password" id="input-join-pin" maxlength="6" inputmode="numeric" class="row-input">
             </label>
           </div>
           <div id="gateway-error" class="gateway-error-text hidden" role="alert"></div>

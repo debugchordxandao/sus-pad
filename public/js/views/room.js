@@ -8,7 +8,7 @@ import { startKeepAwake, stopKeepAwake } from '../wake.js';
 
 const HOST_SESSION_KEY = 'padstudio_host_session';
 const HOST_SESSION_MAX_AGE = 12 * 60 * 60 * 1000;
-const ROLE_NAMES = { host: 'Host', keyboardist: 'Tecladista', drummer: 'Baterista', leader: 'Líder' };
+const ROLE_NAMES = { host: 'Mesa', keyboardist: 'Tecladista', drummer: 'Baterista', leader: 'Host' };
 
 let joinPin = null;        // fica só na memória, para reconectar a uma sala com PIN
 let restoreState = null;   // estado salvo na sala, aplicado quando o host volta depois de fechar a aba
@@ -125,7 +125,8 @@ function showGatewayError(message) {
 
 function revealJoinPin() {
   const input = $('input-join-pin');
-  input.classList.remove('hidden');
+  $('join-pin-row').classList.remove('hidden');
+  $('join-pin-label').textContent = $('select-gateway-role').value === 'leader' ? 'PIN do host' : 'PIN da sala';
   input.value = '';
   input.focus();
 }
@@ -355,7 +356,7 @@ export function initRoom() {
   $('input-gateway-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
   $('input-join-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
   $('select-gateway-role').addEventListener('change', (e) => {
-    $('input-join-pin').placeholder = e.target.value === 'leader' ? 'PIN do líder' : 'PIN da sala';
+    $('join-pin-label').textContent = e.target.value === 'leader' ? 'PIN do host' : 'PIN da sala';
   });
 
   $('btn-room-info').addEventListener('click', openRoomSheet);

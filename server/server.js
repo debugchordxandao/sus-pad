@@ -374,7 +374,7 @@ function handleClientMessage(ws, msg) {
     if (!chosenRole) {
       ws.send(JSON.stringify({
         type: 'error',
-        message: `Papel inválido "${msg.role}". Apenas Tecladista, Baterista ou Líder podem entrar.`
+        message: `Papel inválido "${msg.role}". Apenas Tecladista, Baterista ou Host podem entrar.`
       }));
       return;
     }
