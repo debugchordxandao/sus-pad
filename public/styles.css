@@ -1182,3 +1182,5 @@ body.chart-stage #btn-chart-edit { display: none; }
 .chip--select select:focus-visible { outline: none; }
 body.no-setlist #chart-key-pick, body.no-setlist #btn-chart-original { display: none !important; }
 #btn-chart-original { font-size: 15px; }
+
+.google-signin { display: flex; justify-content: center; margin-bottom: 16px; min-height: 44px; }

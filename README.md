@@ -21,7 +21,7 @@ Pads, bateria, click e repertório para banda ao vivo. Um computador ou tablet l
 | Teclado do computador | 1–0, − e = tocam os 12 tons; Espaço para o pad; → próxima música; Q W E R · A S D F bateria. |
 | MIDI | Em **Ajustes**: qualquer nota toca o pad do mesmo tom e o pedal de sustain avança para a próxima música. Funciona no Chrome e no Edge. |
 | Sem internet | Em **Ajustes**, **Baixar todos os sons** (~85 MB) deixa o app tocando com a internet instável. Requer HTTPS. |
-| Conta da banda | Os repertórios ficam salvos na conta e aparecem em qualquer aparelho. |
+| Conta da banda | Os repertórios ficam salvos na conta e aparecem em qualquer aparelho. Entra com e-mail e senha ou, se o servidor tiver `GOOGLE_CLIENT_ID`, com o botão do Google. |
 
 Se a aba do host for fechada, ao reabrir o app aparece **Voltar para a sala**. A banda continua na mesma sala, com mixer, permissões e repertório recuperados.
 
@@ -65,10 +65,19 @@ O servidor precisa de um processo Node contínuo, por causa dos WebSockets e do 
 | `NODE_ENV` | `production` |
 | `JWT_SECRET` | Chave longa e aleatória (`openssl rand -hex 32`). Obrigatória em produção. |
 | `DATA_DIR` | Pasta do volume persistente: Railway `/app/data`, Render `/var/data` |
+| `GOOGLE_CLIENT_ID` | Opcional. Ativa "Continuar com o Google" (veja abaixo). |
 
 **Railway:** crie um projeto em New Project → Deploy from GitHub repo, defina as variáveis e adicione um Volume em `/app/data`. Depois, em Networking, use Generate Domain.
 
 **Render:** crie um Web Service com o comando de build `npm install` e o de start `npm start`. Defina as variáveis e adicione um Disk em `/var/data`.
+
+### Entrar com o Google (opcional)
+
+1. Em console.cloud.google.com, crie um projeto e vá em **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth** (tipo **Aplicativo da Web**).
+2. Em **Origens JavaScript autorizadas**, adicione o endereço do app (por exemplo `https://seu-app.up.railway.app`). Para testar no computador, adicione também `http://localhost:3000`.
+3. Copie o ID do cliente e defina `GOOGLE_CLIENT_ID` no servidor. O botão aparece sozinho na tela de conta.
+
+Quem entra pelo Google e quem usa e-mail e senha com o mesmo e-mail caem na mesma conta.
 
 Se o front-end ficar em outro domínio, defina `window.PADSTUDIO_WS_URL = "wss://seu-servico"` antes de carregar `js/main.js`.
 

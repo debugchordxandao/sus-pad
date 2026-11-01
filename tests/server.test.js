@@ -269,3 +269,48 @@ test('códigos de sala inexistentes são bloqueados depois de 10 tentativas', as
   assert.match(messages[10], /Muitas tentativas/);
   c.close();
 });
+
+test('entrar com o Google: sem configuração não aparece; com configuração cria a conta e entra', async () => {
+  const http = require('node:http');
+  // Servidor falso no lugar do tokeninfo do Google
+  const fake = http.createServer((req, res) => {
+    const id = new URL(req.url, 'http://x').searchParams.get('id_token');
+    const base = { iss: 'accounts.google.com', aud: 'app-de-teste.apps.googleusercontent.com', exp: String(Math.floor(Date.now() / 1000) + 600), email_verified: 'true' };
+    const answers = {
+      'token-valido-com-mais-de-vinte-caracteres': { ...base, email: 'Musico@Gmail.com', name: 'Músico Teste' },
+      'token-de-outro-app-com-mais-de-vinte-car': { ...base, aud: 'outro-app', email: 'x@gmail.com' },
+      'token-sem-email-verificado-mais-de-vinte': { ...base, email: 'y@gmail.com', email_verified: 'false' }
+    };
+    const body = answers[id];
+    res.writeHead(body ? 200 : 400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(body || { error: 'invalid_token' }));
+  });
+  await new Promise(r => fake.listen(0, '127.0.0.1', r));
+  const plain = await startServer();
+  const google = await startServer({ GOOGLE_CLIENT_ID: 'app-de-teste.apps.googleusercontent.com', GOOGLE_TOKENINFO_URL: `http://127.0.0.1:${fake.address().port}/tokeninfo` });
+  try {
+    const post = (srv, credential) => fetch(`${srv.base}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }) });
+    assert.equal((await (await fetch(`${plain.base}/api/auth/config`)).json()).googleClientId, null);
+    assert.equal((await post(plain, 'token-valido-com-mais-de-vinte-caracteres')).status, 503);
+
+    assert.equal((await (await fetch(`${google.base}/api/auth/config`)).json()).googleClientId, 'app-de-teste.apps.googleusercontent.com');
+    const ok = await post(google, 'token-valido-com-mais-de-vinte-caracteres');
+    assert.equal(ok.status, 200);
+    const { token, user } = await ok.json();
+    assert.equal(user.email, 'musico@gmail.com');
+    assert.equal(user.name, 'Músico Teste');
+    const me = await fetch(`${google.base}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(me.status, 200);
+    // segunda vez: mesma conta, sem duplicar
+    assert.equal((await (await post(google, 'token-valido-com-mais-de-vinte-caracteres')).json()).user.id, user.id);
+
+    assert.equal((await post(google, 'token-de-outro-app-com-mais-de-vinte-car')).status, 401);
+    assert.equal((await post(google, 'token-sem-email-verificado-mais-de-vinte')).status, 401);
+    assert.equal((await post(google, 'token-que-o-google-nao-conhece-mesmo')).status, 401);
+    assert.equal((await post(google, 'curto')).status, 400);
+  } finally {
+    await plain.stop();
+    await google.stop();
+    fake.close();
+  }
+});

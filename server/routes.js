@@ -13,7 +13,9 @@ const {
   optionalAuthMiddleware,
   validateRolePin
 } = require('./auth');
+const crypto = require('node:crypto');
 const db = require('./db');
+const { verifyGoogleCredential, googleClientId } = require('./google');
 const { getClientIp, pinLimiter, roomLookupLimiter, authLimiter } = require('./rate-limit');
 
 const MAX_LIBRARY_BYTES = 1536 * 1024;
@@ -98,6 +100,33 @@ router.post('/auth/login', authLimiter.middleware, async (req, res) => {
   } catch (err) {
     console.error('[Auth Login Error]:', err);
     res.status(500).json({ error: 'Erro ao autenticar.' });
+  }
+});
+
+// O app pergunta se o servidor tem "Entrar com o Google" (só se GOOGLE_CLIENT_ID estiver definido)
+router.get('/auth/config', (req, res) => {
+  res.json({ googleClientId: googleClientId() });
+});
+
+// Entrar com o Google: cria a conta na primeira vez, depois só entra
+router.post('/auth/google', authLimiter.middleware, async (req, res) => {
+  try {
+    const { email, name } = await verifyGoogleCredential(req.body && req.body.credential);
+    let user = db.getUserByEmail(email);
+    if (!user) {
+      // Conta sem senha própria: guarda um segredo aleatório que ninguém conhece
+      const passwordHash = await hashPassword(crypto.randomBytes(24).toString('hex'));
+      const display = name || email.split('@')[0];
+      user = db.createUser({ email, passwordHash, name: display, bandName: display });
+    }
+    res.json({
+      token: generateToken(user),
+      user: { id: user.id, email: user.email, name: user.name, bandName: user.bandName }
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error('[Auth Google Error]:', err);
+    res.status(500).json({ error: 'Erro ao entrar com o Google.' });
   }
 });
 

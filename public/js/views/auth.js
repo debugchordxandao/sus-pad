@@ -9,6 +9,7 @@ let token = null;
 let mode = 'login';
 let syncTimer = null;
 let applyingRemote = false;
+let googleReady = false;
 
 try { token = localStorage.getItem(TOKEN_KEY); } catch (e) { /* ignore */ }
 
@@ -31,6 +32,7 @@ function render() {
   $('btn-auth-open').classList.toggle('logged', !!user);
   $('auth-pill-text').textContent = user ? (user.bandName || user.name) : 'Entrar';
   $('form-auth').classList.toggle('hidden', !!user);
+  $('google-signin').classList.toggle('hidden', !googleReady || !!user);
   $('auth-user-logged').classList.toggle('hidden', !user);
   if (user) {
     $('logged-user-name').textContent = user.bandName || user.name;
@@ -126,6 +128,41 @@ async function submit(e) {
   }
 }
 
+/** "Entrar com o Google": só aparece se o servidor tem GOOGLE_CLIENT_ID. */
+async function initGoogle() {
+  let clientId;
+  try { clientId = (await api('/api/auth/config')).googleClientId; } catch (e) { return; }
+  if (!clientId) return;
+  await new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = resolve; // sem internet: o login por e-mail continua valendo
+    document.head.appendChild(script);
+  });
+  const gsi = window.google?.accounts?.id;
+  if (!gsi) return;
+  gsi.initialize({
+    client_id: clientId,
+    callback: async ({ credential }) => {
+      try {
+        const data = await api('/api/auth/google', { method: 'POST', body: JSON.stringify({ credential }) });
+        signedIn(data);
+        toast(`Bem-vindo, ${data.user.bandName || data.user.name}`, 'success');
+        closeModal($('modal-auth'));
+      } catch (err) {
+        $('auth-error').textContent = err.status ? err.message : 'Sem conexão com o servidor.';
+        $('auth-error').classList.remove('hidden');
+      }
+    }
+  });
+  const box = $('google-signin');
+  gsi.renderButton(box, { type: 'standard', theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'pill', locale: 'pt-BR', width: 320 });
+  googleReady = true;
+  render();
+}
+
 export function initAuth() {
   $('btn-auth-open').addEventListener('click', () => openModal($('modal-auth')));
   $('btn-close-auth').addEventListener('click', () => closeModal($('modal-auth')));
@@ -139,6 +176,7 @@ export function initAuth() {
   });
 
   store.library.onChange(scheduleSync);
+  initGoogle();
   setMode('login');
   render();
 
