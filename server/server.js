@@ -11,6 +11,33 @@ const path = require('path');
 const os = require('os');
 const { WebSocketServer, WebSocket } = require('ws');
 
+// Carrega variáveis do arquivo .env ou .env.local se existirem (apenas fora do ambiente de teste)
+if (process.env.NODE_ENV !== 'test') {
+  for (const envFile of ['.env.local', '.env']) {
+    const envPath = path.join(__dirname, '..', envFile);
+    if (fs.existsSync(envPath)) {
+      try {
+        const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const eqIdx = trimmed.indexOf('=');
+          if (eqIdx > 0) {
+            const key = trimmed.slice(0, eqIdx).trim();
+            let val = trimmed.slice(eqIdx + 1).trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+              val = val.slice(1, -1);
+            }
+            if (!process.env[key]) {
+              process.env[key] = val;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
+}
+
 const apiRoutes = require('./routes');
 const { getClientIp, pinLimiter, roomLookupLimiter } = require('./rate-limit');
 const { validateRolePin } = require('./auth');
