@@ -96,11 +96,35 @@ export class Library {
   load() {
     try {
       const saved = this.storage?.getItem(STORAGE_KEY);
-      if (saved) return normalizeLibrary(JSON.parse(saved));
+      if (saved) {
+        const lib = normalizeLibrary(JSON.parse(saved));
+        this.cleanLegacyDefaults(lib);
+        return lib;
+      }
       const legacy = this.storage?.getItem(LEGACY_KEY);
-      if (legacy) return normalizeLibrary(JSON.parse(legacy));
+      if (legacy) {
+        const lib = normalizeLibrary(JSON.parse(legacy));
+        this.cleanLegacyDefaults(lib);
+        return lib;
+      }
     } catch (e) { /* armazenamento indisponível ou corrompido */ }
     return normalizeLibrary(null);
+  }
+
+  cleanLegacyDefaults(lib) {
+    if (!lib?.lists) return;
+    const legacyTitles = new Set(['A Casa é Sua', 'Ousado Amor', 'Lindo És', 'Ruja o Leão']);
+    let modified = false;
+    for (const l of lib.lists) {
+      if (Array.isArray(l.songs)) {
+        const initialLen = l.songs.length;
+        l.songs = l.songs.filter(s => !legacyTitles.has(s.title));
+        if (l.songs.length !== initialLen) modified = true;
+      }
+    }
+    if (modified) {
+      try { this.storage?.setItem(STORAGE_KEY, JSON.stringify(lib)); } catch (e) {}
+    }
   }
 
   onChange(fn) {
