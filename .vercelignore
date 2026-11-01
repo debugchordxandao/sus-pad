@@ -1,0 +1,6 @@
+_antigo/
+test-*.js
+data/*.json
+.env.local
+.DS_Store
+audio/
